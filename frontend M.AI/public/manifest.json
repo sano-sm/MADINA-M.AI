@@ -1,0 +1,15 @@
+{
+  "short_name": "MTC",
+  "name": "MTC",
+  "description": "Madina Trading Co. business management",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#111111",
+  "background_color": "#0c0c0d"
+}
