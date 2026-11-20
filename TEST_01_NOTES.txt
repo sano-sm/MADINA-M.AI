@@ -1,0 +1,54 @@
+Madina Trading — Test 01 / 19 November 2026
+This is application source code. Business data is exported separately under Owner.
+Test on a separate Railway backend and database. Set REACT_APP_BACKEND_URL to the
+test backend's base URL when building the test frontend (or serve /api at the
+same origin). The previous hardcoded Railway endpoint has been removed.
+
+Included: vehicle stock/dismantled lists; main record search; broker and customer
+invoice selection, company profiles and optional T registration; Owner manual
+invoices and searchable PDF archive; mobile PDF return control; two loan
+directions and signed balance; Owner business ZIP, report PDF and restore.
+The manual invoice writes only an archived document. Gross vehicle prices are
+entered in whole yen and include 10% tax. Invoice-level net is rounded once
+to the nearest yen and distributed across the selected rows.
+
+Loans are independent. Existing loan-generated fund movements stay stored but
+are excluded from the new Funds view and its cash/bank/receivable/payable totals.
+Historical closed-year snapshots are not recalculated.
+
+Backup: select the current company or both companies. Recovering a combined ZIP
+restores the active company's portion. A recovery copy is created in a new
+database by default, subject to MongoDB permission. It does not switch the app
+to the new database. Direct restore into an empty test company requires MongoDB
+transactions. Restore checks company, key account references and stored field
+values. Keep original backup files. Vehicle photos reside in external object
+storage: the ZIP holds their references, not the image objects. ZIPs exported
+by earlier versions cannot supply tables they did not contain.
+
+Checked here: source syntax, yen allocation, 1 to 80 vehicle A4 documents,
+signed loan examples, duplicate invoice submissions, isolation, ZIP preview,
+recovery-copy restore and old-format ZIP compatibility using synthetic records
+and an in-memory database substitute. The full frontend build, actual iPhone
+viewer, Railway deployment and real MongoDB restore still need staging tests.
+
+Changed existing files
+backend/Dockerfile
+backend/server.py
+frontend/src/App.js
+frontend/src/lib/api.js
+frontend/src/pages/Brokers.js
+frontend/src/pages/ContainerTT.js
+frontend/src/pages/Customers.js
+frontend/src/pages/Launcher.js
+frontend/src/pages/Loans.js
+frontend/src/pages/OwnerTools.js
+frontend/src/pages/Settings.js
+frontend/src/pages/Vehicles.js
+
+Added files
+backend/paperwork.py
+backend/assets/NotoNaskhArabic-Regular.ttf
+backend/assets/Noto-font-license.txt
+frontend/src/components/TradingDocuments.js
+frontend/src/lib/documentPreview.js
+TEST_01_NOTES.txt

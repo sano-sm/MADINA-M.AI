@@ -1,0 +1,96 @@
+{
+  "theme": "light",
+  "typography": {
+    "fonts": {
+      "headings_english": "Chivo",
+      "body_english": "IBM Plex Sans",
+      "headings_urdu": "Noto Sans Arabic",
+      "body_urdu": "Noto Sans Arabic",
+      "mono": "JetBrains Mono"
+    },
+    "scale": {
+      "h1": "text-3xl sm:text-4xl tracking-tight font-black",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "small": "text-xs font-medium tracking-wide"
+    },
+    "rtl_specifics": "For Urdu text, increase line-height by one step (e.g., use leading-loose) as Arabic script requires more vertical clearance. Ensure text alignment uses 'text-start' and 'text-end' rather than 'text-left' or 'text-right'. Never center-align dense data.",
+    "instruction": "Avoid Inter. Use Chivo for sharp, authoritative English headings. Ensure both font families are imported properly."
+  },
+  "colors": {
+    "archetype": "Swiss & High-Contrast (Automotive Enterprise Edition)",
+    "primary": "#0F172A",
+    "secondary": "#334155",
+    "accent_success": "#059669",
+    "accent_destructive": "#DC2626",
+    "accent_warning": "#D97706",
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "border": "#E2E8F0",
+    "rules": "Avoid generic SaaS blue. Use high-contrast monochrome (Midnight Slate) for structure and primary actions. Action items use Primary (#0F172A). Use Accent Success for Profit/Valuation and Accent Destructive for stock-outs/expenses. Neutral greys must have a slight blue tint (Slate). NEVER use #1B93A4 (Teal)."
+  },
+  "layouts": {
+    "dashboard_grid": "High Density Grid (Mode B): grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-4 or gap-6. Every pixel must be utilized for data visibility. Use h-full on children.",
+    "surfaces": "Flat backgrounds, 1px subtle border (border-slate-200), max rounded-sm or rounded-none. No default shadow. Hover: slight lift (-translate-y-1) and shadow-md.",
+    "rtl_architecture": "Root element must toggle dir='ltr' and dir='rtl'. ALL spacing MUST use Tailwind logical properties (ps-, pe-, ms-, me-, border-s-, border-e-). The sidebar will naturally shift to the right in RTL mode when using flex/grid properly.",
+    "navigation": "Sidebar for core modules (Dashboard, Vehicles, Parts, Customers, Finance, Settings). Top Sticky Header for Language Toggle (En/Ur), User Profile, and Quick Actions. Header must use Crystal Glass (bg-white/80 backdrop-blur-xl border-b border-slate-200)."
+  },
+  "visual_enhancers": {
+    "login_screen": "Use the provided automotive engine bay image as a full-screen background with a bg-black/70 overlay to ensure the login card (white, sharp edges) pops intensely.",
+    "data_density": "Use compact tables (p-2 cells) for Inventory and Vehicles. Strip zebra striping in favor of clean 1px bottom borders.",
+    "micro_interactions": "Hover states on all rows, active scaling on buttons (active:scale-95). Staggered entrance animations for dashboard metrics.",
+    "icons": "Use lucide-react. In RTL mode, icons conveying direction (arrows, chevrons) must be flipped using 'rtl:rotate-180'."
+  },
+  "components": {
+    "buttons": "Sharp edges (rounded-sm). High contrast (bg-slate-900 text-white hover:bg-slate-800).",
+    "cards": "Cardless or sharp rectangular styles. Avoid excessive rounded corners. Focus on data visibility.",
+    "data_tables": "Use Shadcn Table. Must include sticky headers for scrolling. Align numbers to the 'end', text to the 'start'.",
+    "forms": "Shadcn Form/Input. One-action dismantle workflow should be a multi-step modal or dedicated focused page without distractions.",
+    "charts": "Shadcn Charts (Recharts). Monochrome palettes (shades of slate) with single accent colors for highlighting specific metrics (e.g., this month vs last).",
+    "toast": "Use sonner for toast notifications."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets minimum 4.5:1 ratio. No light gray text on white. Use APCA guidelines.",
+    "rtl_a11y": "Ensure icons conveying direction (arrows, chevrons) are flipped in RTL (using rotate-180 based on dir attribute). Icons like search or camera do not flip.",
+    "testing_tags": "All interactive elements MUST include data-testid (e.g., data-testid='login-submit-button', data-testid='dismantle-vehicle-action')."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1429772011165-0c2e054367b8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwyfHxhdXRvbW90aXZlJTIwcGFydHMlMjBpbnZlbnRvcnl8ZW58MHx8fHwxNzg2MDEzMDA0fDA&ixlib=rb-4.1.0&q=85",
+        "category": "login_background",
+        "description": "Gray engine bay. Apply bg-black/70 overlay for stark contrast."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1759419281480-bacc913c9606?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxhdXRvbW90aXZlJTIwcGFydHMlMjBpbnZlbnRvcnl8ZW58MHx8fHwxNzg2MDEzMDA0fDA&ixlib=rb-4.1.0&q=85",
+        "category": "parts_placeholder",
+        "description": "Collection of car exhaust catalytic converters. Use as a fallback for spare parts without photos."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Files are .js (JSX), NOT .tsx. Generate React components using standard JavaScript/JSX syntax.",
+    "Prioritize RTL layout setup first. Default language on first load is Urdu (RTL). Toggle to English (LTR) must be seamless.",
+    "Use standard Tailwind with logical properties (`ps-`, `pe-`, `ms-`, `me-`). NEVER hardcode `ml-`, `pr-`, `left-`, or `right-` for layout structures.",
+    "Implement JWT Auth system (Email/Password). Build Dynamic Role-Based Access Control (Owner, Manager, Accountant) configured in Settings.",
+    "Build the core 'Vehicles' and 'Spare Parts' inventory systems sharing a unified DB logic for tracing costs.",
+    "For the 'Dismantle' workflow: Create a unified 'One-Action Workflow' converting a vehicle to multiple parts while retaining cost traceability and vehicle history.",
+    "Accounting & Finance: Include Customers, Expenses, Payroll, and automated P&L generation. Japanese Yen (JPY) is the default currency with a 10% default tax rate.",
+    "Invoicing: Use invoice prefix 'MTC-'. Implement a print-friendly invoice view.",
+    "Do not use generic blue gradients. Stick to the 'Swiss Brutalist/High Contrast' palette: deep slates, stark whites, sharp borders.",
+    "Implement `data-testid` on all buttons, form inputs, and navigation links.",
+    "Use Shadcn UI (JS versions) for all forms, tables, and dropdowns. Customize Shadcn spacing to be dense (tight paddings) to fit more data on the screen.",
+    "NEVER use complete transparent backgrounds for overlays, headers, or dropdowns. Always use solid or glassmorphism (backdrop-blur + bg opacity)."
+  ],
+  "universal_guidelines": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this.",
+    "Create depth through layered design elements with z-index hierarchy, NOT heavy drop shadows.",
+    "You MUST NOT apply universal transition (e.g., transition: all). Add transitions to specific properties only.",
+    "You MUST NOT center align the app container (.App { text-align: center; }).",
+    "Never use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 for icons. Use lucide-react.",
+    "Use sonner for toast notifications.",
+    "Ensure hover states explicitly set text colors to avoid readability loss."
+  ]
+}
