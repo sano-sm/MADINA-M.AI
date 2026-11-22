@@ -76,6 +76,78 @@ function parseMaiCreate(text) {
   return { entity: canonical, path };
 }
 
+const genericVoiceFields = [
+  ["chassis_number", ["chassis number", "chassis", "چیسس نمبر", "چیسس"]],
+  ["vehicle_name", ["vehicle name", "car name", "گاڑی کا نام"]],
+  ["make", ["make", "maker", "میک", "میکر"]],
+  ["model", ["model", "ماڈل"]],
+  ["engine_number", ["engine number", "انجن نمبر"]],
+  ["engine_code", ["engine code", "انجن کوڈ"]],
+  ["engine_name", ["engine", "engine name", "انجن"]],
+  ["year", ["year", "سال"]],
+  ["color", ["color", "رنگ"]],
+  ["mileage", ["mileage", "میلیج"]],
+  ["purchase_price", ["purchase price", "buying price", "قیمت خرید", "خریداری کی قیمت"]],
+  ["supplier", ["supplier", "broker", "سپلائر", "بروکر"]],
+  ["name", ["customer name", "broker name", "part name", "name", "نام"]],
+  ["phone", ["phone", "mobile", "فون", "موبائل"]],
+  ["email", ["email", "ای میل"]],
+  ["address", ["address", "پتہ"]],
+  ["quantity", ["quantity", "مقدار"]],
+  ["unit_cost", ["unit cost", "cost", "یونٹ قیمت"]],
+  ["sale_price", ["sale price", "selling price", "فروخت قیمت"]],
+  ["part_number", ["part number", "پارٹ نمبر"]],
+  ["category", ["category", "زمرہ"]],
+  ["location", ["location", "جگہ"]],
+  ["amount", ["amount", "رقم"]],
+  ["description", ["description", "تفصیل"]],
+  ["notes", ["notes", "نوٹس"]],
+];
+
+function parseGenericAssignments(text) {
+  const labels = genericVoiceFields.flatMap(([, words]) => words).sort((a, b) => b.length - a.length);
+  const out = [];
+  for (const [field, words] of genericVoiceFields) {
+    const pattern = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const stop = labels.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const match = text.match(new RegExp(`(?:${pattern})\\s*(?:is|ہے|:|کو|کا|کی|میں)?\\s*([^,;|]+?)(?=\\s+(?:${stop})\\b|[,;|]|$)`, "i"));
+    if (match?.[1]?.trim()) out.push({ field, value: match[1].trim() });
+  }
+  return out;
+}
+
+function setVoiceField(field, value) {
+  const candidates = [...document.querySelectorAll("input, textarea, select")].filter((node) => {
+    if (node.disabled || node.type === "hidden") return false;
+    const haystack = [node.name, node.id, node.placeholder, node.getAttribute("aria-label"), node.getAttribute("data-testid")]
+      .filter(Boolean).join(" ").toLowerCase();
+    const label = node.closest("label")?.innerText?.toLowerCase() || "";
+    return `${haystack} ${label}`.includes(field.replace("_", " ")) || `${haystack} ${label}`.includes(field);
+  });
+  const node = candidates[0];
+  if (!node) return false;
+  const nextValue = node.type === "number" ? value.replace(/[^0-9.-]/g, "") : value;
+  const setter = Object.getOwnPropertyDescriptor(node.constructor.prototype, "value")?.set || Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  setter?.call(node, nextValue);
+  node.dispatchEvent(new Event("input", { bubbles: true }));
+  node.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
+function clickVisibleSave() {
+  const buttons = [...document.querySelectorAll("button")].filter((button) => button.offsetParent !== null);
+  const button = buttons.find((item) => /^(save|submit|confirm|محفوظ|محفوظ کرو|تصدیق|ہاں)$/i.test(item.innerText.trim()) || /save|submit|confirm/i.test(item.getAttribute("aria-label") || ""));
+  if (button) { button.click(); return true; }
+  return false;
+}
+
+function clickVisibleAdd() {
+  const buttons = [...document.querySelectorAll("button")].filter((button) => button.offsetParent !== null);
+  const button = buttons.find((item) => /add|new|create|register|شامل|نیا|نئی|بناؤ/i.test(item.innerText.trim()) && !/menu|language/i.test(item.innerText));
+  if (button) { button.click(); return true; }
+  return false;
+}
+
 export default function VoiceCommand({ kind, navigate, onClose }) {
   const [active, setActive] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -146,12 +218,20 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     }
     const requestedCreate = kind === "voice" ? parseMaiCreate(query) : null;
     if (requestedCreate) {
-      window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
       navigate(`${requestedCreate.path}?voice=new`);
+      window.setTimeout(() => clickVisibleAdd(), 500);
       setReply("نیا فارم کھول دیا گیا ہے۔ تفصیل بولیں، پھر Save یا محفوظ بولیں۔");
       return;
     }
     window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
+    const assignments = parseGenericAssignments(query);
+    const changed = assignments.reduce((count, item) => count + (setVoiceField(item.field, item.value) ? 1 : 0), 0);
+    const wantsSave = /\b(save|submit|confirm|yes|okay|ok)\b|محفوظ|تصدیق|ہاں|ٹھیک ہے/i.test(query);
+    const saved = wantsSave && clickVisibleSave();
+    if (changed || saved) {
+      setReply(saved ? "محفوظ کر دیا گیا۔" : `${changed} field voice سے بھر دی گئی۔ اب Save یا محفوظ بولیں۔`);
+      return;
+    }
     if (kind === "agent") {
       setBusy(true);
       try {
