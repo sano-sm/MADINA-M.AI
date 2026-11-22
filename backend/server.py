@@ -272,6 +272,11 @@ class CompanySettings(BaseModel):
     currency: str = "JPY"
     currency_symbol: str = "¥"
     bank_details: str = ""
+    bank_name: str = ""
+    branch: str = ""
+    branch_code: str = ""
+    account_number: str = ""
+    account_name: str = ""
     invoice_footer: str = "Thank you for your business."
 
 
@@ -755,6 +760,9 @@ async def get_settings(user: dict = Depends(get_current_user)):
 @api.put("/settings")
 async def update_settings(body: CompanySettings, user: dict = Depends(require("settings.manage"))):
     doc = body.model_dump()
+    bank_fields = [("Bank Name", "bank_name"), ("Branch Name", "branch"), ("Branch Code", "branch_code"), ("Account Number", "account_number"), ("Account Holder Name", "account_name")]
+    if any(doc.get(key) for _, key in bank_fields):
+        doc["bank_details"] = "\n".join(f"{label}: {doc[key]}" for label, key in bank_fields if doc.get(key))
     doc["id"] = settings_id()
     doc["company_id"] = current_company.get()
     await sdb.settings.update_one({"id": settings_id()}, {"$set": doc}, upsert=True)
