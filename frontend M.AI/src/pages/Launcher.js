@@ -121,7 +121,6 @@ export default function Launcher() {
 
   return (
     <div className="mx-auto w-full max-w-5xl overflow-x-hidden px-3 pb-28">
-
       {cameraOpen && <CameraReview onClose={()=>setCameraOpen(false)} />}
       {catalogOpen && <VehicleCatalogSearch onClose={()=>setCatalogOpen(false)} />}
       {searchOpen && <SearchRecords close={() => setSearchOpen(false)} navigate={navigate} />}
@@ -178,8 +177,8 @@ export default function Launcher() {
           <p className="truncate text-[11px] text-muted-foreground sm:text-xs">{t("system_subtitle")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {prefs.master && prefs.agent && <button type="button" title="AI - External Agent" aria-label="AI - External Agent" onClick={() => window.dispatchEvent(new CustomEvent("mai:open", { detail: { kind: "agent" } }))} className={`rounded-full border p-1 text-gray-300 ${voiceKind==="agent"?"border-emerald-400 text-emerald-300 animate-pulse":"border-white/20"}`}><Mic size={15}/><span className="block text-[8px] font-bold leading-none">AI</span></button>}
-          {prefs.master && prefs.voice && <button type="button" title="MAI - Madina Assistant" aria-label="MAI - Madina Assistant" onClick={() => window.dispatchEvent(new CustomEvent("mai:open", { detail: { kind: "voice" } }))} className={`rounded-full border p-1 text-gray-300 ${voiceKind==="voice"?"border-emerald-400 text-emerald-300 animate-pulse":"border-white/20"}`}><Mic size={15}/><span className="block text-[8px] font-bold leading-none">MAI</span></button>}
+          {prefs.master && prefs.agent && <button type="button" title="AI - External Agent" aria-label="AI - External Agent" onClick={() => window.dispatchEvent(new CustomEvent("madina:toggle-voice", {detail:{kind:"agent"}}))} className={`rounded-full border p-1 text-gray-300 ${voiceKind==="agent"?"border-emerald-400 text-emerald-300 animate-pulse":"border-white/20"}`}><Mic size={15}/><span className="block text-[8px] font-bold leading-none">AI</span></button>}
+          {prefs.master && prefs.voice && <button type="button" title="MAI - Madina Assistant" aria-label="MAI - Madina Assistant" onClick={() => window.dispatchEvent(new CustomEvent("madina:toggle-voice", {detail:{kind:"voice"}}))} className={`rounded-full border p-1 text-gray-300 ${voiceKind==="voice"?"border-emerald-400 text-emerald-300 animate-pulse":"border-white/20"}`}><Mic size={15}/><span className="block text-[8px] font-bold leading-none">MAI</span></button>}
           <img src={settings?.logo_url || "/logo.png"} alt="MTC" className="h-11 w-11 rounded-xl object-cover ring-1 ring-[var(--gold)]/40 sm:h-12 sm:w-12" />
         </div>
       </div>
