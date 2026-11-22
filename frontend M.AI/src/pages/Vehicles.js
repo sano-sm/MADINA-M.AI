@@ -68,10 +68,34 @@ export default function Vehicles() {
   });
   const editable = can("vehicles.edit");
 
+  const [catalogChoices, setCatalogChoices] = useState([]);
+  const [catalogHint, setCatalogHint] = useState("");
+  const lookupVehicle = async (raw, base) => {
+    const value = String(raw || "").trim();
+    if (value.length < 3) return;
+    try {
+      const {data} = await api.get("/vehicle-catalog/search", {params:{q:value}});
+      const normalized = x => String(x || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const qcode = normalized(value);
+      const eligible = data.filter(r => { const code = normalized(r.model_code); return code && (qcode === code || qcode.startsWith(code)); });
+      const bestLength = Math.max(0,...eligible.map(r=>normalized(r.model_code).length));
+      const best = eligible.filter(r=>normalized(r.model_code).length===bestLength);
+      if (!best.length) {setCatalogHint("No catalog match; manual entry remains available.");setCatalogChoices([]);return;}
+      const unique = [...new Map(best.map(r=>[`${r.make}|${r.vehicle_name}|${r.model_code}|${r.engine_code}`,r])).values()];
+      if (unique.length===1) {applyCatalogChoice(unique[0]);setCatalogChoices([]);setCatalogHint("Model reference matched. Check before saving.");}
+      else {setCatalogChoices(unique);setCatalogHint("Multiple model/engine matches — select the correct one.");}
+    } catch {setCatalogHint("Catalog lookup unavailable; manual entry remains available.");}
+  };
+  const applyCatalogChoice = r => {
+    setForm(prev => prev ? {...prev, make:prev.make || r.make, vehicle_name:prev.vehicle_name || r.vehicle_name,
+      model:prev.model || r.model_code, engine_code:prev.engine_code || r.engine_code} : prev);
+    setCatalogChoices([]);
+  };
   const openAdd = () => {
     api.get("/broker-vehicles/pending").then((r) => setPendingBV(r.data)).catch(() => setPendingBV([]));
     const today = new Date();
     const md = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    setCatalogChoices([]); setCatalogHint("");
     setForm({ ...empty, purchase_date: `${entryYear}-${md}`, payment_method: "bank", purchase_company: "MTC" });
   };
   useEffect(() => {
@@ -79,7 +103,7 @@ export default function Vehicles() {
     // Voice navigation intentionally opens the normal, permission-checked form; it never bypasses save confirmation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editable]);
-  const openEdit = (v) => setForm({ ...empty, ...v, purchase_date: (v.purchase_date || "").slice(0, 10), payment_method: v.payment_method || "", purchase_company: v.purchase_company || "MTC" });
+  const openEdit = (v) => { setCatalogChoices([]); setCatalogHint(""); setForm({ ...empty, ...v, purchase_date: (v.purchase_date || "").slice(0, 10), payment_method: v.payment_method || "", purchase_company: v.purchase_company || "MTC" }); };
   const setEntryYear = (y) => {
     const n = Number(y);
     if (!Number.isFinite(n) || n < 2000 || n > 2100) return;
@@ -317,7 +341,7 @@ export default function Vehicles() {
               <VehiclePurchaseDateField t={t} value={form.purchase_date || ""} entryYear={entryYear} persistYear={!form.id}
                 onYearChange={setEntryYear} onChange={(purchase_date) => setForm({ ...form, purchase_date })} />
               <Field label={t("vehicle_name")}><NameSuggestInput kind="vehicle" data-testid="v-name" value={form.vehicle_name} onChange={(e) => setForm({ ...form, vehicle_name: e.target.value })} /></Field>
-              <Field label={t("chassis")}><Input data-testid="v-chassis" value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} /></Field>
+              <Field label={t("chassis")}><Input data-testid="v-chassis" value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
               <Field label={t("from_label")}><NameSuggestInput kind="supplier" data-testid="v-from" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} /></Field>
               <Field label={t("purchase_price")}><Input type="number" data-testid="v-price" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} /></Field>
               <Field label={t("payment_method")}><Select value={form.payment_method || ""} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} disabled={!!form.broker_vehicle_id}><option value="">{t("not_recorded")}</option><option value="cash">{t("cash")}</option><option value="bank">{t("bank")}</option></Select></Field>
@@ -335,7 +359,7 @@ export default function Vehicles() {
               <summary className="cursor-pointer text-sm text-[var(--gold)]" data-testid="v-more-details">{t("more_details")}</summary>
               <div className="mt-3 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
                 <Field label={t("make")}><NameSuggestInput kind="make" data-testid="v-make" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} /></Field>
-                <Field label={t("model")}><NameSuggestInput kind="model" data-testid="v-model" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></Field>
+                <Field label={t("model")}><NameSuggestInput kind="model" data-testid="v-model" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
                 <Field label={t("engine_name")}><NameSuggestInput kind="engine" data-testid="v-engine-name" value={form.engine_name} onChange={(e) => setForm({ ...form, engine_name: e.target.value })} /></Field>
                 <Field label={t("engine_code")}><Input data-testid="v-engine-code" value={form.engine_code} onChange={(e) => setForm({ ...form, engine_code: e.target.value })} /></Field>
                 <Field label={t("engine_number")}><Input data-testid="v-engine-number" value={form.engine_number} onChange={(e) => setForm({ ...form, engine_number: e.target.value })} /></Field>
@@ -345,6 +369,8 @@ export default function Vehicles() {
                 <Field label={t("notes")}><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
               </div>
             </details>
+            {catalogHint && <p className="mt-2 text-xs text-amber-300">{catalogHint}</p>}
+            {catalogChoices.length>0 && <div className="mt-2 rounded-lg border border-white/20 p-3"><p className="mb-2 text-xs">Choose correct vehicle and engine (reference only):</p>{catalogChoices.map((r,i)=><button key={i} type="button" onClick={()=>applyCatalogChoice(r)} className="mb-1 block w-full rounded border border-white/10 p-2 text-left text-sm hover:bg-white/10">{r.make} {r.vehicle_name} · {r.model_code} · {r.engine_code}</button>)}</div>}
             <div className="mt-3 flex justify-end gap-2">
               <Btn variant="dark" onClick={() => setForm(null)}>{t("cancel")}</Btn>
               <Btn data-testid="save-vehicle" onClick={save}>{t("save")}</Btn>
