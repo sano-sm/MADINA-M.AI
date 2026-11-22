@@ -161,11 +161,24 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
   const submitTyped = () => { const value = transcript.trim(); if (value) runCommand(value); };
   const listeningLabel = status === "starting" ? (language === "en" ? "Starting microphone…" : "مائیکروفون شروع ہو رہا ہے…") : active ? (language === "en" ? "Listening…" : "سن رہا ہے…") : (language === "en" ? "Tap microphone to start" : "شروع کرنے کے لیے مائیکروفون دبائیں");
 
+  // MAI uses a compact, non-blocking microphone instead of a screen-covering dialog.
+  // External AI retains its existing command dialog.
+  if (kind !== "agent") return <>
+    <div className="fixed bottom-24 right-4 z-[80] flex flex-col items-end gap-2" aria-label="Madina Assistant microphone">
+      {error && <div role="alert" className="max-w-xs rounded-lg bg-[#19191c] p-2 text-xs text-amber-300 shadow-lg">{error}</div>}
+      <button type="button" aria-label={active ? "MAI listening; click to stop" : "Start MAI microphone"} title={listeningLabel} onClick={toggleListening}
+        className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-white shadow-lg transition-all ${active ? "border-emerald-300 bg-emerald-600 animate-pulse" : status === "starting" || busy ? "border-yellow-300 bg-amber-500" : "border-gray-400 bg-gray-700"}`}>
+        {active ? <Mic size={24} /> : <MicOff size={24} />}
+      </button>
+    </div>
+    {search !== null && <SearchRecords initialQuery={search} close={() => setSearch(null)} navigate={navigate} />}
+  </>;
+
   return <>
-    <div className="pointer-events-none fixed inset-0 z-[80] flex items-start justify-center p-4 pt-[12vh]">
-      <div className="pointer-events-auto w-full max-w-lg rounded-2xl border border-yellow-500/30 bg-[#19191c] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/70 p-4 pt-[12vh]" onClick={() => { stop(); onClose(); }}>
+      <div className="w-full max-w-lg rounded-2xl border border-yellow-500/30 bg-[#19191c] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between"><b>{kind === "agent" ? "AI — External Agent" : "MAI — Madina Assistant"}</b><button type="button" aria-label="Close" onClick={() => { stop(); onClose(); }}><X size={18} /></button></div>
-        <p className="mb-3 text-xs text-gray-400">{language === "en" ? "Press the microphone to start. Speak one command after another. Press it again to stop; while stopped, nothing is heard." : "MAI کھلا رہے گا جب آپ دوسرے صفحے پر جائیں یا باہر کلک کریں۔ مائیک شروع کرنے کے لیے دبائیں؛ بند کرنے کے لیے دوبارہ دبائیں۔"}</p>
+        <p className="mb-3 text-xs text-gray-400">{language === "en" ? "Press the microphone to start. Speak one command after another. Press it again to stop; while stopped, nothing is heard." : "مائیک دبانے سے شروع کریں۔ ایک کے بعد دوسرا کام بولیں۔ دوبارہ دبانے سے بند ہو جائے گا؛ بند حالت میں کچھ نہیں سنا جائے گا۔"}</p>
         <div className="flex items-center gap-3">
           <button type="button" aria-label={active ? "Stop listening" : "Start listening"} onClick={toggleListening} className={`rounded-full border p-3 transition-all ${active ? "border-emerald-300 bg-emerald-600 text-white animate-pulse shadow-[0_0_22px_rgba(52,211,153,.7)]" : "border-yellow-500/60 bg-[#262329] text-yellow-400"}`}>{active ? <Mic size={22} /> : <MicOff size={22} />}</button>
           <span className="text-sm" aria-live="polite">{listeningLabel}</span>
