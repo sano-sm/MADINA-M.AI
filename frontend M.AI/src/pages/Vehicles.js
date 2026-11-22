@@ -29,9 +29,11 @@ function voiceVehicleFields(text) {
   const year = read(["year", "سال"]); if (/^\d{4}$/.test(year)) out.year = year;
   const color = read(["color", "رنگ"]); if (color) out.color = color;
   const mileage = read(["mileage", "میلیج"]); if (mileage) out.mileage = mileage.replace(/[^0-9]/g, "");
-  const price = read(["purchase price", "price", "قیمت خرید", "قیمت"]); if (price) out.purchase_price = price.replace(/[^0-9.]/g, "");
+  const price = read(["purchase price", "price", "قیمت خرید", "قیمت"]);
+  const naturalPrice = value.match(/(?:اتنے کا لیا|اتنے میں لیا|for)\s*(?:is|ہے|:)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i)?.[1] || "";
+  if (price || naturalPrice) out.purchase_price = (price || naturalPrice).replace(/[^0-9.]/g, "");
   const date = read(["purchase date", "date", "خریداری کی تاریخ", "تاریخ"]); if (/^\d{4}-\d{2}-\d{2}$/.test(date)) out.purchase_date = date;
-  const supplier = read(["broker", "supplier", "بروکر", "سپلائر"]); if (supplier) out.supplier = supplier;
+  const supplier = read(["broker", "supplier", "بروکر", "سپلائر"]); if (supplier) out.supplier = supplier.replace(/^(کی جگہ|کا نام|name)\s*/i, "").trim();
   return out;
 }
 
@@ -127,11 +129,11 @@ export default function Vehicles() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api.get("/customers").then((r) => setCustomers(r.data)).catch(() => {}); }, []);
 
-  const save = async () => {
+  const save = async (formOverride = form) => {
     try {
-      const payload = { ...form, year: form.year ? +form.year : null,
-        mileage: form.mileage ? +form.mileage : null, purchase_price: +form.purchase_price || 0 };
-      if (form.id) await api.put(`/vehicles/${form.id}`, payload);
+      const payload = { ...formOverride, year: formOverride.year ? +formOverride.year : null,
+        mileage: formOverride.mileage ? +formOverride.mileage : null, purchase_price: +formOverride.purchase_price || 0 };
+      if (formOverride.id) await api.put(`/vehicles/${formOverride.id}`, payload);
       else await api.post("/vehicles", payload);
       toast.success(t("save")); setForm(null); load();
     } catch (e) { toast.error(apiError(e)); }
@@ -143,8 +145,17 @@ export default function Vehicles() {
       const text = event.detail?.command || "";
       if (!form || !/(vehicle|گاڑی|chassis|چیسس|engine|انجن|model|ماڈل|price|قیمت|broker|بروکر|year|سال)/i.test(text)) return;
       const fields = voiceVehicleFields(text);
-      if (Object.keys(fields).length) setForm((current) => ({ ...current, ...fields }));
-      if (/\b(confirm|save|yes|okay|ok)\b|تصدیق|محفوظ|ہاں|ٹھیک ہے/i.test(text)) window.setTimeout(() => saveRef.current?.(), 0);
+      const nextForm = { ...form, ...fields };
+      if (Object.keys(fields).length) setForm(nextForm);
+      const lookupValue = fields.chassis_number || fields.model;
+      if (lookupValue) lookupVehicle(lookupValue, nextForm);
+      const spokenSupplier = fields.supplier || "";
+      const pending = pendingBV.find((item) => {
+        const haystack = `${item.broker_name || ""} ${item.vehicle_name || ""} ${item.chassis_number || ""}`.toLowerCase();
+        return spokenSupplier && haystack.includes(spokenSupplier.toLowerCase());
+      });
+      if (pending) pickPending(pending.id);
+      if (/\b(confirm|save|yes|okay|ok)\b|تصدیق|محفوظ|ہاں|ٹھیک ہے/i.test(text)) window.setTimeout(() => saveRef.current?.(nextForm), 0);
     };
     window.addEventListener("mai:voice-command", onVoice);
     return () => window.removeEventListener("mai:voice-command", onVoice);
