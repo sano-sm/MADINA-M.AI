@@ -860,22 +860,72 @@ async def send_ai_agent_message(agent_id: str, body: AIAgentMessageIn, user: dic
         raise HTTPException(status_code=502, detail=f"AI Agent connection failed: {exc}")
 
 
+# Explicit command intents must be resolved BEFORE record search. A spoken
+# navigation instruction is not a database search.
+MAI_DESTINATIONS = (
+    ("/summary", "reports.view", ("summary", "summery", "خلاصہ", "سمری")),
+    ("/purchases", "reports.view", ("purchases", "purchase", "خریداری", "پرچیز")),
+    ("/vehicles", "vehicles.view", ("vehicles", "vehicle", "گاڑی", "گاڑیاں", "وہیکل")),
+    ("/vehicle-sales", "finance.view", ("vehicle sales", "vehicle sale", "گاڑی فروخت")),
+    ("/parts", "parts.view", ("parts inventory", "spare parts", "parts", "پارٹس", "پرزے")),
+    ("/recovery", "parts.view", ("parts sales", "part sales", "recovery", "پارٹس سیل")),
+    ("/customers", "customers.view", ("customers", "customer", "کسٹمر", "گاہک")),
+    ("/brokers", "finance.view", ("brokers", "broker", "بروکر")),
+    ("/expenses", "finance.view", ("expenses", "expense", "اخراجات", "خرچہ")),
+    ("/loans", "reports.view", ("loans", "loan", "ادھار", "قرض")),
+    ("/container", "finance.view", ("container", "کنٹینر")),
+    ("/settings", "settings.view", ("settings", "setting", "سیٹنگ", "ترتیبات")),
+    ("/stock", "reports.view", ("stock overview", "stock", "اسٹاک")),
+    ("/alerts", "dashboard.view", ("alerts", "alert", "الرٹ")),
+    ("/reports", "reports.view", ("reports", "report", "رپورٹ")),
+    ("/dashboard", "dashboard.view", ("dashboard", "ڈیش بورڈ")),
+    ("/", None, ("home", "main page", "ہوم", "مین پیج")),
+)
+
+
+def mai_resolve_intent(command: str):
+    lower = command.strip().lower()
+    if not lower:
+        return ("unknown", None)
+    # Search is deliberate, not a fallback for every unrecognized sentence.
+    search_prefixes = ("search ", "find ", "lookup ", "تلاش ", "ڈھونڈ", "ریکارڈ تلاش")
+    if any(lower.startswith(prefix) for prefix in search_prefixes):
+        return ("search", None)
+    if any(phrase in lower for phrase in ("new vehicle", "register vehicle", "add vehicle", "نئی گاڑی", "گاڑی رجسٹر")):
+        return ("new_vehicle", None)
+    if any(phrase in lower for phrase in ("create invoice", "new invoice", "انوائس بناؤ", "نئی انوائس")):
+        return ("new_invoice", None)
+    for path, permission, words in MAI_DESTINATIONS:
+        if any(word in lower for word in words):
+            return ("navigate", (path, permission))
+    return ("unknown", None)
+
+
 @api.post("/mai/command")
 async def mai_command(body: MAICommandIn, user: dict = Depends(get_current_user)):
     command = body.command.strip()
-    lower = command.lower()
-    if any(word in lower for word in ("summary", "خلاصہ", "summery")):
-        return {"ok": True, "action": "navigate", "navigate_to": "/summary", "message": "Summary page تیار ہے۔"}
-    if any(word in lower for word in ("new vehicle", "register vehicle", "نئی گاڑی", "گاڑی رجسٹر")):
-        if "vehicles.edit" not in user.get("permissions", []):
+    intent, target = mai_resolve_intent(command)
+    permissions = user.get("permissions", [])
+    if intent == "navigate":
+        path, permission = target
+        if permission and permission not in permissions:
+            raise HTTPException(status_code=403, detail="Permission required for this page")
+        return {"ok": True, "action": "navigate", "navigate_to": path, "message": "Page opened."}
+    if intent == "new_vehicle":
+        if "vehicles.edit" not in permissions:
             raise HTTPException(status_code=403, detail="Vehicle edit permission required")
-        return {"ok": True, "action": "draft", "navigate_to": "/vehicles?voice=new", "requires_confirmation": True, "message": "Vehicle form کھول دیا جائے گا؛ save سے پہلے confirmation ضروری ہے۔"}
-    if any(word in lower for word in ("invoice", "انوائس")):
-        if "finance.edit" not in user.get("permissions", []):
+        return {"ok": True, "action": "draft", "navigate_to": "/vehicles?voice=new", "requires_confirmation": True, "message": "Vehicle form opened. Confirm details before saving."}
+    if intent == "new_invoice":
+        if "finance.edit" not in permissions:
             raise HTTPException(status_code=403, detail="Finance edit permission required")
-        return {"ok": True, "action": "draft", "navigate_to": "/vehicle-sales?voice=draft", "requires_confirmation": True, "message": "Invoice draft تیار ہوگا؛ save سے پہلے confirmation ضروری ہے۔"}
-    results = await record_search(command, user)
-    return {"ok": True, "action": "search", "results": results[:100], "message": f"{len(results)} records ملے۔"}
+        return {"ok": True, "action": "draft", "navigate_to": "/vehicle-sales?voice=draft", "requires_confirmation": True, "message": "Invoice page opened. Confirm details before saving."}
+    if intent == "search":
+        term = re.sub(r"^(search|find|lookup|تلاش|ڈھونڈو|ریکارڈ تلاش)\s*", "", command, flags=re.I).strip()
+        if not term:
+            return {"ok": False, "action": "clarify", "message": "Please say what record to search for."}
+        results = await record_search(term, user)
+        return {"ok": True, "action": "search", "results": results[:100], "message": f"{len(results)} records found."}
+    return {"ok": False, "action": "unsupported", "message": "Command not recognized. Try: Open Purchases, Open Vehicles, Open Settings, or Search Toyota."}
 
 
 @api.get("/users")
