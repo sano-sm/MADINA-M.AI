@@ -1,3 +1,4 @@
+import VehicleCatalogSearch from "@/components/VehicleCatalogSearch";
 import VoiceCommand from "@/components/VoiceCommand";
 import CameraReview from "@/components/CameraReview";
 import { useAiPreferences } from "@/components/AiPreferences";
@@ -116,12 +117,14 @@ export default function Launcher() {
   const [searchOpen,setSearchOpen] = useState(false);
   const [voiceKind,setVoiceKind] = useState(null);
   const [cameraOpen,setCameraOpen] = useState(false);
+  const [catalogOpen,setCatalogOpen] = useState(false);
   const maxSale = Math.max(1, ...series.map((s) => s.value));
 
   return (
     <div className="mx-auto w-full max-w-5xl overflow-x-hidden px-3 pb-28">
       {voiceKind && <VoiceCommand kind={voiceKind} navigate={navigate} onClose={()=>setVoiceKind(null)} />}
       {cameraOpen && <CameraReview onClose={()=>setCameraOpen(false)} />}
+      {catalogOpen && <VehicleCatalogSearch onClose={()=>setCatalogOpen(false)} />}
       {searchOpen && <SearchRecords close={() => setSearchOpen(false)} navigate={navigate} />}
       {/* Top utility bar */}
       <div className="relative mb-2 flex items-center justify-between gap-2 pt-1 animate-fade-up">
@@ -169,6 +172,7 @@ export default function Launcher() {
           <span className="text-[9px] gold-text">{user?.role}</span>
         </button>
         {prefs.master && prefs.camera && <button type="button" title="Camera privacy review" aria-label="Camera privacy review" onClick={() => setCameraOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Camera size={15}/></button>}
+          <button type="button" data-testid="catalog-search-btn" title="Model / Engine Lookup" aria-label="Model / Engine Lookup" onClick={() => setCatalogOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Search size={15}/></button>
         </div>
         <div className="min-w-0 flex-1 text-center">
           <h1 className="truncate font-head text-lg font-black leading-tight gold-text sm:text-2xl">{settings?.name || t("app_name")}</h1>
