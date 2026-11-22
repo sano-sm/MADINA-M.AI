@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, MicOff, Search, X } from "lucide-react";
 import { SearchRecords } from "./TradingDocuments";
 import { api } from "@/lib/api";
-import { listPageControls, planPageAction } from "@/lib/maiPageActions";
 
 const destinations = [
   { path: "/brokers", words: ["broker", "brokers", "بروکر"] },
@@ -17,15 +16,6 @@ const destinations = [
   { path: "/expenses", words: ["expense", "اخراجات"] },
   { path: "/container", words: ["container", "کنٹینر"] },
   { path: "/settings", words: ["setting", "سیٹنگ"] },
-  { path: "/", words: ["home", "launcher", "ہوم"] },
-  { path: "/dashboard", words: ["dashboard", "ڈیش بورڈ"] },
-  { path: "/funds", words: ["funds", "فنڈز"] },
-  { path: "/owner", words: ["owner", "اونر"] },
-  { path: "/reports", words: ["report", "reports", "رپورٹ"] },
-  { path: "/audit", words: ["audit", "آڈٹ"] },
-  { path: "/alerts", words: ["alert", "alerts", "الرٹ"] },
-  { path: "/allocations", words: ["allocation", "allocations", "الاٹمنٹ"] },
-  { path: "/stock", words: ["stock", "اسٹاک"] },
 ];
 const searchWords = /search|find|show|open|دکھا|تلاش|ڈھونڈ|نکال|دیکھو|کھولو|record|ریکارڈ/i;
 
@@ -36,15 +26,17 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("idle");
   const [search, setSearch] = useState(null);
-  const [notice, setNotice] = useState("");
-  const [pending, setPending] = useState(null);
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState(false);
   const recognition = useRef(null);
   const keepListening = useRef(false);
   const restartTimer = useRef(null);
+  const session = useRef(0);
   const language = useMemo(() => (document.documentElement.lang === "en" ? "en-US" : "ur-PK"), []);
 
   const stop = () => {
     keepListening.current = false;
+    session.current += 1;
     window.clearTimeout(restartTimer.current);
     try { recognition.current?.stop(); } catch (e) { /* already stopped */ }
     recognition.current = null;
@@ -54,6 +46,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
 
   useEffect(() => () => {
     keepListening.current = false;
+    session.current += 1;
     window.clearTimeout(restartTimer.current);
     try { recognition.current?.abort(); } catch (e) { /* component is closing */ }
   }, []);
@@ -62,43 +55,27 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     const query = rawText.trim();
     if (!query) return;
     setHistory((items) => [...items.slice(-4), query]);
-    setNotice("");
-    if (pending && /^(ok|confirm|yes|ٹھیک|ہاں|اوکے)$/i.test(query)) {
-      try { pending.action(); setNotice("Confirmed. Action performed on the current page."); }
-      catch (e) { setError(`Action failed: ${e.message}`); }
-      setPending(null);
-      return;
-    }
-    if (pending && /^(cancel|no|نہیں|منسوخ)$/i.test(query)) { setPending(null); setNotice("Cancelled."); return; }
-    if (pending) setPending(null);
-    if (/^(what can i do|list fields|list buttons|page controls|کیا کر سکتے|خانے بتاؤ|بٹن بتاؤ)/i.test(query)) {
-      const items = listPageControls();
-      setNotice(items.length ? items.slice(0, 30).map(x => `${x.index}. ${x.type}: ${x.label}`).join("\n") : "No accessible page controls found.");
-      return;
-    }
-    const pageAction = kind === "voice" ? planPageAction(query) : null;
-    if (pageAction) {
-      if (pageAction.immediate) pageAction.immediate();
-      else if (pageAction.action) setPending(pageAction);
-      else setNotice(pageAction.message);
-      return;
-    }
-    // Navigation is read-only. Voice never triggers a save/delete/payment action.
-    // Access to a destination is still enforced by the existing protected routes.
-    const lower = query.toLowerCase();
-    const destination = destinations.find((item) => item.words.some((word) => lower.includes(word.toLowerCase())));
-    const navigationRequest = /open|go to|navigate|کھولو|جاؤ|کھول|اوپن/i.test(query);
-    if (navigationRequest && destination) {
-      navigate(destination.path);
-      setNotice(`Opened ${destination.path}. Search or edit using the existing page controls.`);
-      if (searchWords.test(query) && /search|find|تلاش|ڈھونڈ/i.test(query)) setSearch(query);
-      return;
-    }
-    if (kind === "agent") {
-      setNotice("External AI connection is configured in Settings; this microphone is not yet linked to a verified agent. No changes were made.");
-      return;
-    }
     window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
+    setReply("");
+    if (kind === "agent") {
+      setBusy(true);
+      try {
+        const agentsResponse = await api.get("/ai-agents");
+        const enabled = (agentsResponse.data || []).filter((agent) => agent.enabled);
+        if (!enabled.length) {
+          setError("External AI ابھی منسلک نہیں۔ Settings میں AI Agent کا محفوظ HTTPS endpoint اور server-side key ترتیب دیں۔");
+          return;
+        }
+        const response = await api.post(`/ai-agents/${encodeURIComponent(enabled[0].id)}/message`, { message: query, context: { source: "voice" } });
+        const data = response.data || {};
+        if (!data.ok) throw new Error(`AI provider returned status ${data.status || "unknown"}`);
+        const result = data.result;
+        setReply(typeof result === "string" ? result : (result?.reply || result?.message || result?.text || JSON.stringify(result || {})));
+      } catch (err) {
+        setError(err?.response?.data?.detail || err.message || "External AI سے رابطہ نہیں ہو سکا۔");
+      } finally { setBusy(false); }
+      return;
+    }
     try {
       const response = await api.post("/mai/command", { command: query, context: { source: kind } });
       const data = response.data || {};
@@ -106,9 +83,15 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       if (data.action === "search" || data.results?.length) setSearch(query);
       return;
     } catch (error) {
-      // Local fallback keeps MAI useful when the backend is temporarily unavailable.
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        setError("اس کمانڈ کی اجازت نہیں ہے۔");
+        return;
+      }
+      // Read-only local navigation/search fallback if the server is unreachable.
     }
+    const lower = query.toLowerCase();
     if (searchWords.test(lower)) { setSearch(query); return; }
+    const destination = destinations.find((item) => item.words.some((word) => lower.includes(word.toLowerCase())));
     if (destination) { navigate(destination.path); return; }
     setSearch(query);
   };
@@ -121,6 +104,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       return;
     }
     keepListening.current = true;
+    const currentSession = ++session.current;
     setError("");
     setStatus("starting");
     const r = new Recognition();
@@ -129,8 +113,9 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
-    r.onstart = () => { setActive(true); setStatus("listening"); };
+    r.onstart = () => { if (currentSession !== session.current) { try { r.abort(); } catch (_) {} return; } setActive(true); setStatus("listening"); };
     r.onresult = (event) => {
+      if (currentSession !== session.current) return;
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const result = event.results[i];
@@ -143,6 +128,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       if (interim.trim()) setTranscript(interim.trim());
     };
     r.onerror = (event) => {
+      if (currentSession !== session.current) return;
       if (event.error === "no-speech" && keepListening.current) return;
       const messages = {
         "not-allowed": language === "en" ? "Microphone permission was denied. Allow microphone access and try again." : "مائیکروفون کی اجازت نہیں ملی۔ اجازت دے کر دوبارہ کوشش کریں۔",
@@ -154,9 +140,10 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       keepListening.current = false;
     };
     r.onend = () => {
+      if (currentSession !== session.current) return;
       recognition.current = null;
       if (keepListening.current) {
-        restartTimer.current = window.setTimeout(start, 250);
+        restartTimer.current = window.setTimeout(() => { if (currentSession === session.current && keepListening.current) start(); }, 350);
       } else {
         setActive(false);
         setStatus("idle");
@@ -175,20 +162,19 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
   const listeningLabel = status === "starting" ? (language === "en" ? "Starting microphone…" : "مائیکروفون شروع ہو رہا ہے…") : active ? (language === "en" ? "Listening…" : "سن رہا ہے…") : (language === "en" ? "Tap microphone to start" : "شروع کرنے کے لیے مائیکروفون دبائیں");
 
   return <>
-    <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/70 p-4 pt-[12vh]" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl border border-yellow-500/30 bg-[#19191c] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="pointer-events-none fixed inset-0 z-[80] flex items-start justify-center p-4 pt-[12vh]">
+      <div className="pointer-events-auto w-full max-w-lg rounded-2xl border border-yellow-500/30 bg-[#19191c] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between"><b>{kind === "agent" ? "AI — External Agent" : "MAI — Madina Assistant"}</b><button type="button" aria-label="Close" onClick={() => { stop(); onClose(); }}><X size={18} /></button></div>
-        <p className="mb-3 text-xs text-gray-400">{language === "en" ? "Press the microphone to start. Speak one command after another. Press it again to stop; while stopped, nothing is heard." : "مائیک دبانے سے شروع کریں۔ ایک کے بعد دوسرا کام بولیں۔ دوبارہ دبانے سے بند ہو جائے گا؛ بند حالت میں کچھ نہیں سنا جائے گا۔"}</p>
+        <p className="mb-3 text-xs text-gray-400">{language === "en" ? "Press the microphone to start. Speak one command after another. Press it again to stop; while stopped, nothing is heard." : "MAI کھلا رہے گا جب آپ دوسرے صفحے پر جائیں یا باہر کلک کریں۔ مائیک شروع کرنے کے لیے دبائیں؛ بند کرنے کے لیے دوبارہ دبائیں۔"}</p>
         <div className="flex items-center gap-3">
           <button type="button" aria-label={active ? "Stop listening" : "Start listening"} onClick={toggleListening} className={`rounded-full border p-3 transition-all ${active ? "border-emerald-300 bg-emerald-600 text-white animate-pulse shadow-[0_0_22px_rgba(52,211,153,.7)]" : "border-yellow-500/60 bg-[#262329] text-yellow-400"}`}>{active ? <Mic size={22} /> : <MicOff size={22} />}</button>
           <span className="text-sm" aria-live="polite">{listeningLabel}</span>
         </div>
         <textarea aria-label="Voice command text" value={transcript} onChange={(event) => setTranscript(event.target.value)} placeholder={language === "en" ? "For example: open customers and search Ahmad" : "مثلاً: کسٹمر کھولو اور احمد تلاش کرو"} className="mt-3 min-h-20 w-full rounded-lg border border-white/20 bg-black/30 p-3 text-sm text-white" />
-        {notice && <p role="status" className="mt-2 whitespace-pre-wrap max-h-40 overflow-y-auto text-xs text-emerald-300">{notice}</p>}
-        {pending && <div className="mt-3 rounded-lg border border-amber-500/40 p-3 text-sm"><p>{pending.message}</p><div className="mt-2 flex gap-2"><button type="button" className="rounded bg-emerald-700 px-3 py-1" onClick={() => { try { pending.action(); setNotice("Confirmed. Action performed."); } catch (e) { setError(e.message); } setPending(null); }}>OK</button><button type="button" className="rounded bg-gray-700 px-3 py-1" onClick={() => setPending(null)}>Cancel</button></div></div>}
         {error && <p role="alert" className="mt-2 text-xs text-amber-400">{error}</p>}
+        {reply && <div role="status" className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg border border-emerald-500/30 bg-black/30 p-3 text-sm">{reply}</div>}
         {history.length > 0 && <div className="mt-3 rounded-lg border border-white/10 p-2 text-xs text-gray-300"><div className="mb-1 text-gray-500">Recent commands</div>{history.map((item, index) => <div key={`${item}-${index}`}>• {item}</div>)}</div>}
-        <button type="button" onClick={submitTyped} disabled={!transcript.trim()} className="mt-3 flex items-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"><Search size={16} />{language === "en" ? "Run command" : "کمانڈ چلائیں"}</button>
+        <button type="button" onClick={submitTyped} disabled={!transcript.trim() || busy} className="mt-3 flex items-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"><Search size={16} />{language === "en" ? "Run command" : "کمانڈ چلائیں"}</button>
       </div>
     </div>
     {search !== null && <SearchRecords initialQuery={search} close={() => setSearch(null)} navigate={navigate} />}
