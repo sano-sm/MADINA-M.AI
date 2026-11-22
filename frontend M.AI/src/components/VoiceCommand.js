@@ -56,6 +56,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     setHistory((items) => [...items.slice(-4), query]);
     window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
     setReply("");
+    setError("");
     if (kind === "agent") {
       setBusy(true);
       try {
@@ -108,7 +109,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     setStatus("starting");
     const r = new Recognition();
     recognition.current = r;
-    r.lang = language;
+    r.lang = document.documentElement.lang === "ur" ? "ur-PK" : language;
     r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
