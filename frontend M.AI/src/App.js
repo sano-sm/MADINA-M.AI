@@ -1,13 +1,14 @@
 import { mobilePdfLinks } from "@/lib/documentPreview";
 import "@/App.css";
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { I18nProvider } from "@/context/I18nContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { CompanyProvider } from "@/context/CompanyContext";
 import Layout from "@/components/Layout";
+import VoiceCommand from "@/components/VoiceCommand";
 import Login from "@/pages/Login";
 import Launcher from "@/pages/Launcher";
 import Dashboard from "@/pages/Dashboard";
@@ -55,7 +56,17 @@ function Gate() {
 }
 
 function AppRoutes() {
+  const navigate = useNavigate();
+  const [voiceKind, setVoiceKind] = React.useState(null);
+  React.useEffect(() => {
+    const open = (event) => setVoiceKind(event.detail?.kind || "voice");
+    const close = () => setVoiceKind(null);
+    window.addEventListener("mai:open", open);
+    window.addEventListener("mai:close", close);
+    return () => { window.removeEventListener("mai:open", open); window.removeEventListener("mai:close", close); };
+  }, []);
   return (
+    <>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Protected bare><Launcher /></Protected>} />
@@ -82,6 +93,8 @@ function AppRoutes() {
       <Route path="/container" element={<Protected perm="finance.view"><ContainerTT /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    {voiceKind && <VoiceCommand kind={voiceKind} navigate={navigate} onClose={() => setVoiceKind(null)} />}
+    </>
   );
 }
 
