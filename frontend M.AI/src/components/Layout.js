@@ -5,7 +5,6 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
 import { useAiPreferences } from "@/components/AiPreferences";
-import VoiceCommand from "@/components/VoiceCommand";
 import {
   LayoutDashboard, LayoutGrid, Car, Wrench, Users, Receipt, Calculator, FileBarChart,
   Settings as SettingsIcon, LogOut, Languages, Menu, X, History, Mic,
@@ -31,6 +30,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [voiceKind, setVoiceKind] = useState(null);
+  const openAssistant = (kind) => window.dispatchEvent(new CustomEvent("mai:open", { detail: { kind } }));
   const { prefs } = useAiPreferences();
 
   const items = NAV.filter((n) => can(n.perm));
@@ -74,7 +74,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {voiceKind && <VoiceCommand kind={voiceKind} navigate={navigate} onClose={() => setVoiceKind(null)} />}
+
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-e border-border bg-[var(--surface)] md:flex">
         <SidebarContent />
@@ -98,8 +98,8 @@ export default function Layout({ children }) {
           <div className="hidden md:block text-sm text-muted-foreground">{t("welcome")}, <span className="text-white">{user?.name}</span></div>
           <div className="flex items-center gap-2">
             <CompanySwitcher />
-            {prefs.master && prefs.agent && <button type="button" title="AI" aria-label="AI voice assistant" onClick={() => setVoiceKind((value) => value === "agent" ? null : "agent")} className={`rounded-full border p-1 text-gray-300 ${voiceKind === "agent" ? "border-emerald-400 text-emerald-300 animate-pulse" : "border-white/20"}`}><span className="block text-[8px] font-bold leading-none">AI</span><Mic size={15} /></button>}
-            {prefs.master && prefs.voice && <button type="button" title="MAI" aria-label="MAI voice assistant" onClick={() => setVoiceKind((value) => value === "voice" ? null : "voice")} className={`rounded-full border p-1 text-gray-300 ${voiceKind === "voice" ? "border-emerald-400 text-emerald-300 animate-pulse" : "border-white/20"}`}><span className="block text-[8px] font-bold leading-none">MAI</span><Mic size={15} /></button>}
+            {prefs.master && prefs.agent && <button type="button" title="AI" aria-label="AI voice assistant" onClick={() => openAssistant("agent")} className={`rounded-full border p-1 text-gray-300 ${voiceKind === "agent" ? "border-emerald-400 text-emerald-300 animate-pulse" : "border-white/20"}`}><Mic size={15} /><span className="block text-[8px] font-bold leading-none">AI</span></button>}
+            {prefs.master && prefs.voice && <button type="button" title="MAI" aria-label="MAI voice assistant" onClick={() => openAssistant("voice")} className={`rounded-full border p-1 text-gray-300 ${voiceKind === "voice" ? "border-emerald-400 text-emerald-300 animate-pulse" : "border-white/20"}`}><Mic size={15} /><span className="block text-[8px] font-bold leading-none">MAI</span></button>}
             <button onClick={toggle} data-testid="lang-toggle"
               className="flex items-center gap-2 rounded-sm border border-border px-3 py-1.5 text-sm text-white hover:border-[var(--gold)]">
               <Languages size={16} /> {lang === "en" ? "اردو" : "English"}
