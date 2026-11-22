@@ -4612,6 +4612,32 @@ async def shutdown():
     client.close()
 
 
+
+# Read-only reference catalog bundled from the owner's M-AI.xlsx.
+# This is NOT an inventory/vehicle-entry collection and never modifies business records.
+_VEHICLE_CATALOG_PATH = ROOT_DIR / "vehicle_catalog.json"
+with open(_VEHICLE_CATALOG_PATH, encoding="utf-8") as _catalog_file:
+    VEHICLE_CATALOG = json.load(_catalog_file)
+
+def _catalog_code(value: str) -> str:
+    return "".join(ch for ch in (value or "").upper() if ch.isalnum())
+
+@api.get("/vehicle-catalog/search")
+async def vehicle_catalog_search(q: str = "", user: dict = Depends(get_current_user)):
+    if not any(p in user.get("permissions", []) for p in ("vehicles.view", "vehicles.edit")):
+        raise HTTPException(status_code=403, detail="Permission denied")
+    term = _catalog_code(q)[:80]
+    if len(term) < 2:
+        return []
+    matches = []
+    for entry in VEHICLE_CATALOG:
+        code = _catalog_code(entry.get("model_code", ""))
+        # Exact model code, chassis prefix (e.g. NZE121-12345), or partial model code.
+        if code and (term == code or term.startswith(code) or code.startswith(term)):
+            matches.append((0 if term == code else 1 if term.startswith(code) else 2, -len(code), entry))
+    matches.sort(key=lambda x: (x[0], x[1], x[2].get("make", ""), x[2].get("vehicle_name", "")))
+    return [m[2] for m in matches[:30]]
+
 app.include_router(api)
 
 
