@@ -14,9 +14,24 @@ const destinations = [
   { path: "/summary", words: ["summary", "خلاصہ"] },
   { path: "/expenses", words: ["expense", "اخراجات"] },
   { path: "/container", words: ["container", "کنٹینر"] },
+  { path: "/dashboard", words: ["dashboard", "ڈیش بورڈ"] },
+  { path: "/reports", words: ["report", "reports", "رپورٹ"] },
+  { path: "/audit", words: ["audit", "آڈٹ"] },
+  { path: "/alerts", words: ["alert", "alerts", "الرٹ"] },
+  { path: "/allocations", words: ["allocation", "allocations", "تقسیم"] },
+  { path: "/stock", words: ["stock", "اسٹاک"] },
+  { path: "/funds", words: ["funds", "fund", "فنڈ"] },
+  { path: "/owner", words: ["owner tools", "owner", "اونر"] },
   { path: "/settings", words: ["setting", "سیٹنگ"] },
 ];
 const searchWords = /search|find|show|open|دکھا|تلاش|ڈھونڈ|نکال|دیکھو|کھولو|record|ریکارڈ/i;
+const createWords = /\b(new|create|add|register|enter|write)\b|نئی|نیا|بناؤ|بنائیں|شامل|لکھو|داخل/i;
+const entityRoutes = {
+  vehicle: "/vehicles", vehicles: "/vehicles", car: "/vehicles", گاڑی: "/vehicles", گاڑیاں: "/vehicles",
+  part: "/parts", parts: "/parts", inventory: "/parts", پارٹ: "/parts", پارٹس: "/parts", پرزہ: "/parts", پرزے: "/parts",
+  customer: "/customers", customers: "/customers", کسٹمر: "/customers", گاہک: "/customers",
+  broker: "/brokers", brokers: "/brokers", بروکر: "/brokers",
+};
 const maiEntities = {
   vehicle: { words: ["vehicle", "vehicles", "car", "گاڑی", "گاڑیاں"], sections: ["Vehicles", "Customer vehicle"] },
   part: { words: ["part", "parts", "spare part", "پارٹ", "پارٹس", "پرزہ", "پرزے"], sections: ["Parts"] },
@@ -49,6 +64,16 @@ function parseMaiAction(text) {
   const target = text.slice(0, fieldIndex).replace(/\b(edit|update|change)\b|ایڈٹ|تبدیل|اپڈیٹ/ig, "").replace(new RegExp(maiEntities[entity].words.join("|"), "ig"), "").trim();
   if (!target || !rawValue) return { action, entity, error: "ریکارڈ کا نام/نمبر اور نئی value دونوں بولیں۔" };
   return { action, entity, target, updates: { [fields[fieldName]]: rawValue } };
+}
+
+function parseMaiCreate(text) {
+  if (!createWords.test(text)) return null;
+  const lower = text.toLowerCase();
+  const entity = Object.keys(entityRoutes).find((word) => lower.includes(word.toLowerCase()));
+  if (!entity) return null;
+  const path = entityRoutes[entity];
+  const canonical = path === "/vehicles" ? "vehicle" : path === "/parts" ? "part" : path === "/customers" ? "customer" : "broker";
+  return { entity: canonical, path };
 }
 
 export default function VoiceCommand({ kind, navigate, onClose }) {
@@ -117,6 +142,13 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       } catch (error) {
         setError(error?.response?.data?.detail || "یہ MAI action نہیں ہو سکا۔");
       } finally { setBusy(false); }
+      return;
+    }
+    const requestedCreate = kind === "voice" ? parseMaiCreate(query) : null;
+    if (requestedCreate) {
+      window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
+      navigate(`${requestedCreate.path}?voice=new`);
+      setReply("نیا فارم کھول دیا گیا ہے۔ تفصیل بولیں، پھر Save یا محفوظ بولیں۔");
       return;
     }
     window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));

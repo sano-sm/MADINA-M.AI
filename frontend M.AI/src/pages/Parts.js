@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api, apiError } from "@/lib/api";
 import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
@@ -56,6 +56,35 @@ export default function Parts() {
       toast.success(t("save")); setForm(null); load();
     } catch (e) { toast.error(apiError(e)); }
   };
+  const saveRef = useRef(null);
+  saveRef.current = save;
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("voice") === "new" && editable && !form) {
+      setTab("parts"); setForm({ ...emptyPart, purchase_date: today(), purchase_company: "MTC" });
+    }
+  }, [editable, form]);
+  useEffect(() => {
+    const onVoice = (event) => {
+      const text = String(event.detail?.command || "");
+      if (!form || !/(part|parts|پارٹ|پارٹس|پرزہ|name|نام|quantity|مقدار|cost|قیمت|supplier|سپلائر|category|زمرہ|location|جگہ)/i.test(text)) return;
+      const read = (labels) => {
+        const match = text.match(new RegExp(`(?:${labels.join("|")})\\s*(?:is|ہے|:)?\\s*([^,;|]+?)(?=\\s+(?:name|نام|quantity|مقدار|cost|قیمت|supplier|سپلائر|category|زمرہ|location|جگہ)\\b|[,;|]|$)`, "i"));
+        return match ? match[1].trim() : "";
+      };
+      const updates = {};
+      const name = read(["part name", "name", "پارٹ کا نام", "نام"]); if (name) updates.name = name;
+      const quantity = read(["quantity", "مقدار"]); if (quantity) updates.quantity = quantity.replace(/[^0-9.]/g, "");
+      const unitCost = read(["unit cost", "cost", "خرید قیمت", "قیمت"]); if (unitCost) updates.unit_cost = unitCost.replace(/[^0-9.]/g, "");
+      const supplier = read(["supplier", "from", "سپلائر"]); if (supplier) updates.supplier = supplier;
+      const category = read(["category", "زمرہ"]); if (category) updates.category = category;
+      const location = read(["location", "جگہ"]); if (location) updates.location = location;
+      const number = read(["part number", "number", "پارٹ نمبر"]); if (number) updates.part_number = number;
+      if (Object.keys(updates).length) setForm((current) => ({ ...current, ...updates }));
+      if (/\b(confirm|save|yes|okay|ok)\b|تصدیق|محفوظ|ہاں|ٹھیک ہے/i.test(text)) window.setTimeout(() => saveRef.current?.(), 0);
+    };
+    window.addEventListener("mai:voice-command", onVoice);
+    return () => window.removeEventListener("mai:voice-command", onVoice);
+  }, [form]);
 
   const delPart = async (id) => {
     if (!window.confirm("Delete?")) return;

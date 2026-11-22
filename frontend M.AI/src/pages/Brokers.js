@@ -1,6 +1,6 @@
 import { printWindow } from "@/lib/documentPreview";
 import { PartyFields, IssuePanel } from "@/components/TradingDocuments";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { api, apiError } from "@/lib/api";
 import NameSuggestInput from "@/components/NameSuggestInput";
 import { useI18n } from "@/context/I18nContext";
@@ -40,6 +40,28 @@ export default function Brokers() {
     try { await api.post("/brokers", { name, phone, ...fields }); setFields({}); setAddOpen(false); setName(""); setPhone(""); load(); toast.success(t("save")); }
     catch (e) { toast.error(apiError(e)); }
   };
+  const createBrokerRef = useRef(null);
+  createBrokerRef.current = createBroker;
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("voice") === "new" && editable && !addOpen) setAddOpen(true);
+  }, [editable, addOpen]);
+  useEffect(() => {
+    const onVoice = (event) => {
+      const text = String(event.detail?.command || "");
+      if (!addOpen || !/(broker|بروکر|name|نام|phone|فون|موبائل)/i.test(text)) return;
+      const read = (labels) => {
+        const match = text.match(new RegExp(`(?:${labels.join("|")})\\s*(?:is|ہے|:)?\\s*([^,;|]+?)(?=\\s+(?:name|نام|phone|فون|موبائل)\\b|[,;|]|$)`, "i"));
+        return match ? match[1].trim() : "";
+      };
+      const nextName = read(["broker name", "name", "بروکر کا نام", "نام"]);
+      const nextPhone = read(["phone", "موبائل", "فون"]);
+      if (nextName) setName(nextName);
+      if (nextPhone) setPhone(nextPhone);
+      if (/\b(confirm|save|yes|okay|ok)\b|تصدیق|محفوظ|ہاں|ٹھیک ہے/i.test(text)) window.setTimeout(() => createBrokerRef.current?.(), 0);
+    };
+    window.addEventListener("mai:voice-command", onVoice);
+    return () => window.removeEventListener("mai:voice-command", onVoice);
+  }, [addOpen]);
 
   return (
     <div>

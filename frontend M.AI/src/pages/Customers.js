@@ -104,6 +104,32 @@ export default function Customers() {
     } catch (e) { toast.error(apiError(e)); }
     finally { savingRef.current = false; setSaving(false); }
   };
+  const saveRef = useRef(null);
+  saveRef.current = save;
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("voice") === "new" && editable && !form) {
+      setForm({ name: "", phone: "", email: "", address: "" });
+    }
+  }, [editable, form]);
+  useEffect(() => {
+    const onVoice = (event) => {
+      const text = String(event.detail?.command || "");
+      if (!form || !/(customer|کسٹمر|گاہک|name|نام|phone|فون|email|ای میل|address|پتہ)/i.test(text)) return;
+      const read = (labels) => {
+        const match = text.match(new RegExp(`(?:${labels.join("|")})\\s*(?:is|ہے|:)?\\s*([^,;|]+?)(?=\\s+(?:name|نام|phone|فون|email|ای میل|address|پتہ)\\b|[,;|]|$)`, "i"));
+        return match ? match[1].trim() : "";
+      };
+      const updates = {};
+      const name = read(["customer name", "name", "کسٹمر کا نام", "نام"]); if (name) updates.name = name;
+      const phone = read(["phone", "موبائل", "فون"]); if (phone) updates.phone = phone;
+      const email = read(["email", "ای میل"]); if (email) updates.email = email;
+      const address = read(["address", "پتہ"]); if (address) updates.address = address;
+      if (Object.keys(updates).length) setForm((current) => ({ ...current, ...updates }));
+      if (/\b(confirm|save|yes|okay|ok)\b|تصدیق|محفوظ|ہاں|ٹھیک ہے/i.test(text)) window.setTimeout(() => saveRef.current?.(), 0);
+    };
+    window.addEventListener("mai:voice-command", onVoice);
+    return () => window.removeEventListener("mai:voice-command", onVoice);
+  }, [form]);
 
   const selected = rows.find((c) => c.id === selectedId);
   const openDelete = () => {
