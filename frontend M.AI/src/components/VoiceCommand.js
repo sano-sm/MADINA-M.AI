@@ -17,6 +17,39 @@ const destinations = [
   { path: "/settings", words: ["setting", "سیٹنگ"] },
 ];
 const searchWords = /search|find|show|open|دکھا|تلاش|ڈھونڈ|نکال|دیکھو|کھولو|record|ریکارڈ/i;
+const maiEntities = {
+  vehicle: { words: ["vehicle", "vehicles", "car", "گاڑی", "گاڑیاں"], sections: ["Vehicles", "Customer vehicle"] },
+  part: { words: ["part", "parts", "spare part", "پارٹ", "پارٹس", "پرزہ", "پرزے"], sections: ["Parts"] },
+  customer: { words: ["customer", "customers", "کسٹمر", "گاہک"], sections: ["Customers"] },
+};
+const maiEditFields = {
+  vehicle: { name: "vehicle_name", "vehicle name": "vehicle_name", make: "make", model: "model", color: "color", "engine number": "engine_number", supplier: "supplier", notes: "notes", رنگ: "color", ماڈل: "model", میک: "make" },
+  part: { name: "name", category: "category", location: "location", supplier: "supplier", "part number": "part_number", نام: "name", زمرہ: "category" },
+  customer: { name: "name", phone: "phone", email: "email", address: "address", tax: "tax_id", نام: "name", فون: "phone", پتہ: "address" },
+};
+
+function detectMaiEntity(text) {
+  const lower = text.toLowerCase();
+  return Object.entries(maiEntities).find(([, value]) => value.words.some((word) => lower.includes(word.toLowerCase())))?.[0] || null;
+}
+
+function parseMaiAction(text) {
+  const lower = text.toLowerCase();
+  const action = /\b(delete|remove)\b|حذف|مٹاؤ|ڈیلیٹ/i.test(text) ? "delete" : /\b(edit|update|change)\b|ایڈٹ|تبدیل|اپڈیٹ/i.test(text) ? "edit" : null;
+  const entity = detectMaiEntity(text);
+  if (!action || !entity) return null;
+  const fields = maiEditFields[entity];
+  if (action === "delete") {
+    return { action, entity, target: text.replace(/\b(delete|remove)\b|حذف|مٹاؤ|ڈیلیٹ/ig, "").replace(new RegExp(maiEntities[entity].words.join("|"), "ig"), "").trim() };
+  }
+  const fieldName = Object.keys(fields).sort((a, b) => b.length - a.length).find((field) => lower.includes(field.toLowerCase()));
+  if (!fieldName) return { action, entity, error: "بولیں: edit vehicle chassis نمبر color red، یا edit customer نام Ali۔" };
+  const fieldIndex = lower.lastIndexOf(fieldName.toLowerCase());
+  const rawValue = text.slice(fieldIndex + fieldName.length).replace(/^\s*(to|is|:|کرکے|ہے)\s*/i, "").trim();
+  const target = text.slice(0, fieldIndex).replace(/\b(edit|update|change)\b|ایڈٹ|تبدیل|اپڈیٹ/ig, "").replace(new RegExp(maiEntities[entity].words.join("|"), "ig"), "").trim();
+  if (!target || !rawValue) return { action, entity, error: "ریکارڈ کا نام/نمبر اور نئی value دونوں بولیں۔" };
+  return { action, entity, target, updates: { [fields[fieldName]]: rawValue } };
+}
 
 export default function VoiceCommand({ kind, navigate, onClose }) {
   const [active, setActive] = useState(false);
@@ -54,9 +87,39 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     const query = rawText.trim();
     if (!query) return;
     setHistory((items) => [...items.slice(-4), query]);
-    window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
     setReply("");
     setError("");
+    const requestedRecordAction = kind === "voice" ? parseMaiAction(query) : null;
+    if (requestedRecordAction) {
+      if (requestedRecordAction.error) { setError(requestedRecordAction.error); return; }
+      setBusy(true);
+      try {
+        const found = await api.get("/record-search", { params: { q: requestedRecordAction.target } });
+        const matches = (found.data || []).filter((row) => row.record && maiEntities[requestedRecordAction.entity].sections.includes(row.section));
+        if (matches.length !== 1) {
+          setReply(matches.length ? "ایک سے زیادہ ریکارڈ ملے۔ نام کے ساتھ chassis/phone/part number بھی بولیں۔" : "ریکارڈ نہیں ملا۔ نام یا نمبر کے ساتھ دوبارہ بولیں۔");
+          return;
+        }
+        const record = matches[0];
+        if (requestedRecordAction.action === "delete" && !window.confirm(`یہ ریکارڈ حذف کریں؟\n${record.label}`)) {
+          setReply("حذف منسوخ کر دیا گیا۔");
+          return;
+        }
+        const response = await api.post("/mai/record-action", {
+          action: requestedRecordAction.action,
+          entity: requestedRecordAction.entity,
+          record_id: record.record,
+          updates: requestedRecordAction.updates || {},
+          confirmed: requestedRecordAction.action === "delete",
+        });
+        setReply(response.data?.message || "MAI action completed.");
+        window.dispatchEvent(new CustomEvent("mai:record-changed", { detail: { entity: requestedRecordAction.entity, recordId: record.record } }));
+      } catch (error) {
+        setError(error?.response?.data?.detail || "یہ MAI action نہیں ہو سکا۔");
+      } finally { setBusy(false); }
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("mai:voice-command", { detail: { command: query, source: kind } }));
     if (kind === "agent") {
       setBusy(true);
       try {

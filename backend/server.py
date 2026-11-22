@@ -308,6 +308,14 @@ class MAICommandIn(BaseModel):
     context: dict = Field(default_factory=dict)
 
 
+class MAIRecordActionIn(BaseModel):
+    action: str = Field(pattern=r"^(edit|delete)$")
+    entity: str = Field(pattern=r"^(vehicle|part|customer)$")
+    record_id: str = Field(min_length=1, max_length=128)
+    updates: dict = Field(default_factory=dict)
+    confirmed: bool = False
+
+
 # ---- Brokers / Suppliers ----
 class BrokerIn(BaseModel):
     bank_name: str = ""
@@ -926,6 +934,51 @@ async def mai_command(body: MAICommandIn, user: dict = Depends(get_current_user)
         results = await record_search(term, user)
         return {"ok": True, "action": "search", "results": results[:100], "message": f"{len(results)} records found."}
     return {"ok": False, "action": "unsupported", "message": "Command not recognized. Try: Open Purchases, Open Vehicles, Open Settings, or Search Toyota."}
+
+
+# Voice actions deliberately allow only descriptive edits. Financial fields,
+# inventory quantities, invoices, and customer history cannot be changed by a
+# spoken command. Deletion is always confirmed in the browser first.
+MAI_RECORD_RULES = {
+    "vehicle": {"collection": "vehicles", "permission": "vehicles.edit",
+                 "fields": {"vehicle_name", "make", "model", "engine_name", "engine_code",
+                             "engine_number", "color", "supplier", "notes"}},
+    "part": {"collection": "parts", "permission": "parts.edit",
+             "fields": {"name", "part_number", "category", "location", "supplier"}},
+    "customer": {"collection": "customers", "permission": "customers.edit",
+                  "fields": {"name", "phone", "email", "address", "tax_id"}},
+}
+
+
+@api.post("/mai/record-action")
+async def mai_record_action(body: MAIRecordActionIn, user: dict = Depends(get_current_user)):
+    rule = MAI_RECORD_RULES[body.entity]
+    if rule["permission"] not in user.get("permissions", []):
+        raise HTTPException(status_code=403, detail=f"Permission required: {rule['permission']}")
+    collection = getattr(sdb, rule["collection"])
+    existing = await collection.find_one({"id": body.record_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"{body.entity.title()} record not found")
+
+    if body.action == "delete":
+        if not body.confirmed:
+            return {"ok": False, "action": "confirm_delete", "entity": body.entity,
+                    "record_id": body.record_id, "label": existing.get("name") or existing.get("chassis_number") or body.record_id,
+                    "message": "Confirmation is required before deletion."}
+        if body.entity == "vehicle":
+            return await delete_vehicle(body.record_id, user)
+        if body.entity == "part":
+            return await delete_part(body.record_id, user)
+        # Customers have business-history protection and password re-verification.
+        raise HTTPException(status_code=409, detail="Customer deletion requires the normal password-protected Settings action")
+
+    updates = {key: value for key, value in body.updates.items() if key in rule["fields"]}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No safe descriptive fields were supplied for editing")
+    await collection.update_one({"id": body.record_id}, {"$set": updates})
+    await audit(user, "update", body.entity, f"MAI voice edit: {body.entity} {body.record_id}; fields={','.join(updates)}")
+    return {"ok": True, "action": "edit", "entity": body.entity, "record_id": body.record_id,
+            "message": f"{body.entity.title()} record updated."}
 
 
 @api.get("/users")
@@ -4464,7 +4517,7 @@ async def record_search(q: str, user: dict = Depends(get_current_user)):
             clauses.append({"items.ref_id":{"$in":[r["id"] for r in ids]}})
         async for row in getattr(sdb,coll).find({"$or":clauses}).limit(100):
             label = " · ".join(str(row[k]) for k in fields.split() if row.get(k))
-            results.append({"section":title,"label":label or row.get("id"),"route":route,"record":row.get(target,"")})
+            results.append({"section":title,"label":label or row.get("id"),"route":route,"record":row.get(target) or row.get("id","")})
     if ids:
         for v in await sdb.vehicles.find({"id":{"$in":[r["id"] for r in ids]},"customer_id":{"$nin":[None,""]}}).to_list(None):
             if v.get("customer_id"):
