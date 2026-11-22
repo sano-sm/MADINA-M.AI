@@ -1,6 +1,6 @@
 import { mobilePdfLinks } from "@/lib/documentPreview";
 import "@/App.css";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -41,6 +41,17 @@ function Protected({ children, perm, bare }) {
   return bare ? children : <Layout>{children}</Layout>;
 }
 
+function PersistentVoice() {
+  const navigate = useNavigate();
+  const [kind, setKind] = useState(null);
+  useEffect(() => {
+    const handler = (event) => setKind((old) => old === event.detail.kind ? null : event.detail.kind);
+    window.addEventListener("madina:toggle-voice", handler);
+    return () => window.removeEventListener("madina:toggle-voice", handler);
+  }, []);
+  return kind ? <VoiceCommand kind={kind} navigate={navigate} onClose={() => setKind(null)} /> : null;
+}
+
 function Gate() {
   const { ready, locked, user, reconnectKey } = useAuth();
   if (!ready) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
@@ -51,22 +62,13 @@ function Gate() {
   return (
     <SettingsProvider key={reconnectKey}>
       <AppRoutes />
+      <PersistentVoice />
     </SettingsProvider>
   );
 }
 
 function AppRoutes() {
-  const navigate = useNavigate();
-  const [voiceKind, setVoiceKind] = React.useState(null);
-  React.useEffect(() => {
-    const open = (event) => setVoiceKind(event.detail?.kind || "voice");
-    const close = () => setVoiceKind(null);
-    window.addEventListener("mai:open", open);
-    window.addEventListener("mai:close", close);
-    return () => { window.removeEventListener("mai:open", open); window.removeEventListener("mai:close", close); };
-  }, []);
   return (
-    <>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Protected bare><Launcher /></Protected>} />
@@ -93,8 +95,6 @@ function AppRoutes() {
       <Route path="/container" element={<Protected perm="finance.view"><ContainerTT /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    {voiceKind && <VoiceCommand kind={voiceKind} navigate={navigate} onClose={() => setVoiceKind(null)} />}
-    </>
   );
 }
 
