@@ -175,6 +175,15 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       const response = await api.post("/mai/command", { command: query, context: { source: kind } });
       const data = response.data || {};
       if (data.navigate_to) navigate(data.navigate_to);
+      if (data.action === "search" && Array.isArray(data.results)) {
+        if (data.results.length === 1 && data.results[0].route && data.results[0].record) {
+          navigate(`/${data.results[0].route}?record=${encodeURIComponent(data.results[0].record)}`);
+          setReply(`ریکارڈ کھول دیا: ${data.results[0].label || data.results[0].record}`);
+          return;
+        }
+        setReply(data.results.length ? `${data.results.length} ریکارڈ ملے۔ نام یا نمبر مزید واضح بولیں۔` : "ریکارڈ نہیں ملا۔");
+        return;
+      }
       setReply(data.message || (data.action === "navigate" ? "Page opened" : "Command received"));
       return;
     } catch (error) {
