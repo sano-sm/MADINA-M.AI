@@ -901,6 +901,12 @@ def mai_resolve_intent(command: str):
         return ("search", None)
     if any(phrase in lower for phrase in ("new vehicle", "register vehicle", "add vehicle", "نئی گاڑی", "گاڑی رجسٹر")):
         return ("new_vehicle", None)
+    if any(phrase in lower for phrase in ("new part", "add part", "نیا پارٹ", "نئی پارٹس", "پارٹ شامل")):
+        return ("new_part", None)
+    if any(phrase in lower for phrase in ("new customer", "add customer", "نیا کسٹمر", "نیا گاہک", "کسٹمر شامل")):
+        return ("new_customer", None)
+    if any(phrase in lower for phrase in ("new broker", "add broker", "نیا بروکر", "بروکر شامل")):
+        return ("new_broker", None)
     if any(phrase in lower for phrase in ("create invoice", "new invoice", "انوائس بناؤ", "نئی انوائس")):
         return ("new_invoice", None)
     for path, permission, words in MAI_DESTINATIONS:
@@ -923,6 +929,18 @@ async def mai_command(body: MAICommandIn, user: dict = Depends(get_current_user)
         if "vehicles.edit" not in permissions:
             raise HTTPException(status_code=403, detail="Vehicle edit permission required")
         return {"ok": True, "action": "draft", "navigate_to": "/vehicles?voice=new", "requires_confirmation": True, "message": "Vehicle form opened. Confirm details before saving."}
+    if intent == "new_part":
+        if "parts.edit" not in permissions:
+            raise HTTPException(status_code=403, detail="Part edit permission required")
+        return {"ok": True, "action": "draft", "navigate_to": "/parts?voice=new", "requires_confirmation": True, "message": "Part form opened. Confirm details before saving."}
+    if intent == "new_customer":
+        if "customers.edit" not in permissions:
+            raise HTTPException(status_code=403, detail="Customer edit permission required")
+        return {"ok": True, "action": "draft", "navigate_to": "/customers?voice=new", "requires_confirmation": True, "message": "Customer form opened. Confirm details before saving."}
+    if intent == "new_broker":
+        if "finance.edit" not in permissions:
+            raise HTTPException(status_code=403, detail="Broker edit permission required")
+        return {"ok": True, "action": "draft", "navigate_to": "/brokers?voice=new", "requires_confirmation": True, "message": "Broker form opened. Confirm details before saving."}
     if intent == "new_invoice":
         if "finance.edit" not in permissions:
             raise HTTPException(status_code=403, detail="Finance edit permission required")
