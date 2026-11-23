@@ -196,7 +196,7 @@ function InvoicesSection({ mode }) {
           </button>
         ))}
         {!filtered.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
-      </div>
+      </div>}
 
       {detail ? (
         <InvoiceSheet key={detail.id} detail={detail} editable={editable}
