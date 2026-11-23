@@ -207,12 +207,16 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
           setReply("حذف منسوخ کر دیا گیا۔");
           return;
         }
+        if (!window.confirm(`Apply ${requestedRecordAction.action} to ${record.label}?\nSay OK only after reviewing the details.`)) {
+          setReply("تبدیلی منسوخ کر دی گئی۔");
+          return;
+        }
         const response = await api.post("/mai/record-action", {
           action: requestedRecordAction.action,
           entity: requestedRecordAction.entity,
           record_id: record.record,
           updates: requestedRecordAction.updates || {},
-          confirmed: requestedRecordAction.action === "delete",
+          confirmed: true,
         });
         setReply(response.data?.message || "MAI action completed.");
         window.dispatchEvent(new CustomEvent("mai:record-changed", { detail: { entity: requestedRecordAction.entity, recordId: record.record } }));
@@ -232,7 +236,8 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     const assignments = parseGenericAssignments(query);
     const changed = assignments.reduce((count, item) => count + (setVoiceField(item.field, item.value) ? 1 : 0), 0);
     const wantsSave = /\b(save|submit|confirm|yes|okay|ok)\b|محفوظ|تصدیق|ہاں|ٹھیک ہے/i.test(query);
-    const saved = wantsSave && clickVisibleSave();
+    const saved = false; // Never click a Save button automatically from speech.
+    if (wantsSave && !changed) { setReply("محفوظ کرنے سے پہلے فارم کی تفصیل دیکھ کر خود Save دبائیں۔ کوئی ریکارڈ خودکار طور پر محفوظ نہیں کیا گیا۔"); return; }
     if (changed || saved) {
       setReply(saved ? "محفوظ کر دیا گیا۔" : `${changed} field voice سے بھر دی گئی۔ اب Save یا محفوظ بولیں۔`);
       return;
