@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCompany } from "@/context/CompanyContext";
 import { PageHeader, Btn, Modal, Field, Input, Select, Badge, Empty } from "@/components/kit";
 import { toast } from "sonner";
-import { Plus, Printer, Trash2, FileText, Wallet, Layers, ClipboardList, Pencil, CalendarDays, Lock, Unlock } from "lucide-react";
+import { Plus, Printer, Trash2, FileText, Wallet, Layers, ClipboardList, Pencil, CalendarDays, Lock, Unlock, FolderOpen, FolderClosed } from "lucide-react";
 
 const TABS = [
   { key: "invoices", label: "container_invoice", icon: FileText },
@@ -20,6 +20,9 @@ const TABS = [
 export default function ContainerTT() {
   const { t } = useI18n();
   const [tab, setTab] = useState("invoices");
+  const { theme } = useSettings();
+  // Folder appearance follows the website theme; existing records and calculations stay unchanged.
+  const folderDesign = theme === "black" ? "b" : theme === "royal" ? "c" : "a";
 
   return (
     <div>
@@ -29,6 +32,21 @@ export default function ContainerTT() {
           <button key={x.key} data-testid={`ct-tab-${x.key}`} onClick={() => setTab(x.key)}
             className={`inline-flex items-center gap-2 rounded-sm border px-4 py-2 text-sm font-semibold transition-colors ${tab === x.key ? "gold-gradient border-transparent text-black" : "border-border bg-[var(--surface-2)] text-white hover:border-[var(--gold)]"}`}>
             <x.icon size={16} />{t(x.label)}
+          </button>
+        ))}
+      </div>
+      <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-4" data-testid="ct-themed-folders">
+        {[
+          { key: "invoices", label: "Container Invoice" },
+          { key: "income", label: "TT Invoice" },
+          { key: "bl", label: "BL Amount" },
+        ].map((item) => (
+          <button type="button" key={item.key} onClick={() => setTab(item.key)}
+            data-testid={`ct-folder-${item.key}`}
+            aria-pressed={tab === item.key}
+            className={`ct-theme-folder ct-theme-folder--${folderDesign} ${tab === item.key ? "ct-theme-folder--active" : ""}`}>
+            {tab === item.key ? <FolderOpen className="ct-theme-folder-icon" aria-hidden="true" /> : <FolderClosed className="ct-theme-folder-icon" aria-hidden="true" />}
+            <span className="ct-theme-folder-label">{item.label}</span>
           </button>
         ))}
       </div>
