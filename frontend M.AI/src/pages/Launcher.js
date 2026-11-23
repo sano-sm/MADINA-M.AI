@@ -198,8 +198,8 @@ export default function Launcher() {
       <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 sm:gap-2 lg:grid-cols-8">
         {apps.map((a, i) => (
           <button key={a.key} data-testid={`app-${a.key}`} onClick={() => openApp(a)}
-            className="stat-card relative flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 px-1 py-2.5 animate-fade-up"
-            style={{ background: "linear-gradient(160deg,#1c1c1f 0%,#141416 100%)", animationDelay: `${i * 25}ms`, boxShadow: "0 4px 12px rgba(0,0,0,0.45)" }}>
+            className="quick-access-c relative flex flex-col items-center justify-center gap-1 border px-1 py-2.5 animate-fade-up"
+            style={{ animationDelay: `${i * 25}ms` }}>
             {a.badge && alertCount > 0 && (
               <span data-testid="alerts-badge" className="absolute end-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">{alertCount}</span>
             )}
