@@ -715,6 +715,51 @@ async def pin_set(body: PinIn, user: dict = Depends(require("settings.manage")))
     return {"ok": True}
 
 
+# Independent Owner PIN for future Owner Tools / financial archive access.
+# Never overwrite or reuse the app unlock PIN.
+@api.get("/owner/pin/status")
+async def owner_pin_status(user: dict = Depends(get_current_user)):
+    if user.get("email", "").lower() != _owner_email():
+        raise HTTPException(status_code=403, detail="Owner only")
+    owner = await get_owner()
+    return {"pin_set": bool(owner and owner.get("owner_tools_pin_hash"))}
+
+
+@api.post("/owner/pin/set")
+async def owner_pin_set(body: PinIn, user: dict = Depends(get_current_user)):
+    if user.get("email", "").lower() != _owner_email():
+        raise HTTPException(status_code=403, detail="Owner only")
+    if not isinstance(body.pin, str) or not body.pin.isdigit() or len(body.pin) != 4:
+        raise HTTPException(status_code=400, detail="Owner PIN must be exactly 4 digits")
+    owner = await get_owner()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Owner not found")
+    await db.users.update_one({"id": owner["id"]}, {"$set": {"owner_tools_pin_hash": hash_password(body.pin)}})
+    await audit(user, "update", "security", "Changed independent Owner PIN")
+    return {"ok": True}
+
+
+@api.post("/owner/pin/verify")
+async def owner_pin_verify(body: PinIn, user: dict = Depends(get_current_user)):
+    if user.get("email", "").lower() != _owner_email():
+        raise HTTPException(status_code=403, detail="Owner only")
+    owner = await get_owner()
+    if not owner or not owner.get("owner_tools_pin_hash"):
+        raise HTTPException(status_code=400, detail="Owner PIN not configured")
+    att = await db.pin_attempts.find_one({"id": "owner_tools"}) or {}
+    if att.get("locked_until") and att["locked_until"] > now_iso():
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+    if not verify_password(body.pin, owner["owner_tools_pin_hash"]):
+        fails = att.get("fails", 0) + 1
+        upd = {"fails": fails}
+        if fails >= 5:
+            upd = {"fails": 0, "locked_until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}
+        await db.pin_attempts.update_one({"id": "owner_tools"}, {"$set": upd}, upsert=True)
+        raise HTTPException(status_code=401, detail="Incorrect Owner PIN")
+    await db.pin_attempts.update_one({"id": "owner_tools"}, {"$set": {"fails": 0, "locked_until": None}}, upsert=True)
+    return {"ok": True}
+
+
 @api.post("/auth/pin/forgot")
 async def pin_forgot(body: PinForgotIn):
     owner = await get_owner()
