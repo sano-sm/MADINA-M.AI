@@ -347,3 +347,37 @@ html[data-madina-theme="royal"] [style*="linear-gradient(155deg,#1c1c1f"] { back
 .ct-saved-paper-date { font-size:11px;color:#8a94a4;margin-top:auto; }
 .ct-saved-paper-footer { font-size:11px;font-weight:900;letter-spacing:.08em;color:#e17e65; }
 @media(max-width:560px){.ct-saved-panel{padding:14px}.ct-saved-grid{gap:10px}.ct-saved-paper{width:115px;height:153px;padding:12px 7px 8px}.ct-saved-paper-number{font-size:12px}}
+
+/* Reference-inspired illustrated folder surfaces: richer gold edging, document detail and highlights. */
+.ct-folder-panel { position:relative; isolation:isolate; }
+.ct-folder-panel::before { content:"";position:absolute;right:0;top:0;width:22%;height:28%;pointer-events:none;opacity:.8;clip-path:polygon(60% 0,100% 0,100% 100%);background:linear-gradient(125deg,transparent 10%,var(--ct-accent) 65%,#fff1b4 83%,var(--ct-accent)); }
+.ct-folder-panel--b::before { background:linear-gradient(125deg,transparent,#8ad3ff,#e7f6ff,#3c9fff); }
+.ct-design-card { overflow:hidden;border-radius:22px;background:radial-gradient(ellipse at 35% 10%,#ffffff12,transparent 55%),var(--ct-card);box-shadow:inset 0 1px 1px #ffffff55,inset 0 -2px 3px #0007,0 8px 14px #0006; }
+.ct-design-card::after { content:"";position:absolute;inset:4px;border:1px solid color-mix(in srgb,var(--ct-accent) 35%,transparent);border-radius:inherit;pointer-events:none; }
+.ct-design-art--invoices { filter:drop-shadow(2px 5px 2px #0007); }
+.ct-design-art--invoices svg { stroke-width:2.1; }
+.ct-folder-panel--c .ct-design-art--invoices { color:#ffbf32;filter:drop-shadow(2px 3px 0 #895316); }
+.ct-folder-panel--a .ct-design-art--invoices { color:#178dff;filter:drop-shadow(2px 3px 0 #002a68); }
+.ct-folder-panel--b .ct-design-art--invoices { color:#147af5;filter:drop-shadow(2px 3px 0 #78b4f1); }
+.ct-design-art--income,.ct-design-art--bl { background:linear-gradient(145deg,#fffdf1 0%,#fff3cf 55%,#dbb76d 100%);border:1px solid #d8a95d;box-shadow:inset 0 1px 0 #fff,2px 4px 6px #0005;border-radius:9px 12px 9px 9px; }
+.ct-folder-panel--b .ct-design-art--income,.ct-folder-panel--b .ct-design-art--bl { background:linear-gradient(140deg,#fff,#e2f1ff 70%,#9acbfa);border-color:#7aaee3; }
+.ct-design-art--income::after { content:"✓";position:absolute;bottom:-5px;right:-6px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:2px solid #f5d87c;background:linear-gradient(#52ca6a,#087d37);color:white;font-size:15px;font-weight:900;box-shadow:1px 2px 4px #0006; }
+.ct-folder-panel--c .ct-design-art--income::after { background:linear-gradient(#eacb67,#a77c18); }
+.ct-folder-panel--b .ct-design-art--income::after { background:linear-gradient(#57db77,#078d37); }
+.ct-design-title { text-shadow:0 1px 2px #0003; }
+.ct-folder-panel--b .ct-design-title { text-shadow:none; }
+@media(max-width:560px) {
+  .ct-folder-panel { padding:13px 8px 17px; }
+  .ct-folder-grid { gap:6px; }
+  .ct-design-card { min-height:152px;gap:7px;padding:12px 4px 9px; }
+  .ct-design-card::after { inset:3px; }
+  .ct-design-art { width:51px;height:53px; }
+  .ct-design-art--income::after { width:17px;height:17px;font-size:12px;right:-4px;bottom:-3px; }
+  .ct-design-title { font-size:clamp(10px,3vw,14px);line-height:1.15; }
+  .ct-design-caption { font-size:clamp(8px,2.3vw,10px); }
+  .ct-folder-panel--c .ct-design-card { border-radius:14px; }
+}
+@media(max-width:360px) {
+  .ct-design-card { min-height:140px; }
+  .ct-design-art { width:42px;height:45px; }
+}
