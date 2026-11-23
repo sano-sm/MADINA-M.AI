@@ -67,6 +67,15 @@ function Gate() {
   );
 }
 
+function ReservedEmptyPage({ name }) {
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+      <h1 className="text-2xl font-bold text-foreground">{name}</h1>
+      <div className="mt-5 min-h-[320px] rounded-xl border border-border bg-card" aria-label={name + " empty workspace"} />
+    </main>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -86,6 +95,8 @@ function AppRoutes() {
       <Route path="/alerts" element={<Protected perm="dashboard.view"><Alerts /></Protected>} />
       <Route path="/recovery" element={<Protected perm="parts.view"><Recovery /></Protected>} />
       <Route path="/allocations" element={<Protected perm="finance.view"><Allocations /></Protected>} />
+      <Route path="/empty/users" element={<Protected perm="settings.view"><ReservedEmptyPage name="Users — Free Folder" /></Protected>} />
+      <Route path="/empty/summary" element={<Protected perm="reports.view"><ReservedEmptyPage name="Summary — Free Folder" /></Protected>} />
       <Route path="/summary" element={<Protected perm="reports.view"><Summary /></Protected>} />
       <Route path="/brokers" element={<Protected perm="finance.view"><Brokers /></Protected>} />
       <Route path="/loans" element={<Protected perm="reports.view"><Loans /></Protected>} />
