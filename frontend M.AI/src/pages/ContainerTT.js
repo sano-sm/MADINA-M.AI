@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCompany } from "@/context/CompanyContext";
 import { PageHeader, Btn, Modal, Field, Input, Select, Badge, Empty } from "@/components/kit";
 import { toast } from "sonner";
-import { Plus, Printer, Trash2, FileText, Wallet, Layers, ClipboardList, Pencil, CalendarDays, Lock, Unlock, FolderOpen, FolderClosed } from "lucide-react";
+import { Plus, Printer, Trash2, FileText, Wallet, Layers, ClipboardList, Pencil, CalendarDays, Lock, Unlock, FolderOpen, FolderClosed, ChevronRight, ChevronsRight, Container, FileCheck2, Ship } from "lucide-react";
 
 const TABS = [
   { key: "invoices", label: "container_invoice", icon: FileText },
@@ -35,21 +35,38 @@ export default function ContainerTT() {
           </button>
         ))}
       </div>
-      <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-4" data-testid="ct-themed-folders">
-        {[
-          { key: "invoices", label: "Container Invoice" },
-          { key: "income", label: "TT Invoice" },
-          { key: "bl", label: "BL Amount" },
-        ].map((item) => (
-          <button type="button" key={item.key} onClick={() => setTab(item.key)}
-            data-testid={`ct-folder-${item.key}`}
-            aria-pressed={tab === item.key}
-            className={`ct-theme-folder ct-theme-folder--${folderDesign} ${tab === item.key ? "ct-theme-folder--active" : ""}`}>
-            {tab === item.key ? <FolderOpen className="ct-theme-folder-icon" aria-hidden="true" /> : <FolderClosed className="ct-theme-folder-icon" aria-hidden="true" />}
-            <span className="ct-theme-folder-label">{item.label}</span>
-          </button>
-        ))}
-      </div>
+      <section className={`ct-folder-panel ct-folder-panel--${folderDesign}`} data-testid="ct-themed-folders" aria-label="Container and TT document folders">
+        <div className="ct-folder-panel-heading">
+          <Ship aria-hidden="true" className="ct-folder-panel-ship" />
+          <span>Container <span className="ct-folder-amp">&amp;</span> TT</span>
+          <span className="ct-folder-heading-line" />
+        </div>
+        <div className="ct-folder-grid">
+          {[
+            { key: "invoices", label: "Container Invoices", caption: folderDesign === "b" ? "Container Invoice List" : "All Container Invoices", icon: Container },
+            { key: "income", label: "TT Invoices", caption: folderDesign === "b" ? "TT Invoice List" : "All TT Receipts", icon: FileCheck2 },
+            { key: "bl", label: "BL Amount", caption: folderDesign === "b" ? "BL Invoice List" : "All BL Records", icon: Ship },
+          ].map((item) => (
+            <button type="button" key={item.key} onClick={() => setTab(item.key)}
+              data-testid={`ct-folder-${item.key}`}
+              aria-pressed={tab === item.key}
+              className={`ct-design-card ct-design-card--${folderDesign} ${tab === item.key ? "ct-design-card--active" : ""}`}>
+              <span className={`ct-design-art ct-design-art--${item.key}`}>
+                <item.icon aria-hidden="true" strokeWidth={1.65} />
+                {item.key === "income" && <span className="ct-design-art-mark">TT</span>}
+                {item.key === "bl" && <span className="ct-design-art-mark">BL</span>}
+              </span>
+              <span className="ct-design-copy">
+                <span className="ct-design-title">{item.label}</span>
+                <span className="ct-design-caption">{item.caption}</span>
+              </span>
+              <span className="ct-design-arrow" aria-hidden="true">
+                {folderDesign === "c" ? <ChevronsRight /> : <ChevronRight />}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
       {tab === "invoices" && <InvoicesSection />}
       {tab === "income" && <IncomeSection />}
       {tab === "bl" && <BLAmountSection />}
