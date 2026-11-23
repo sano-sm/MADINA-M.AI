@@ -44,6 +44,8 @@ function AppearanceTheme() {
     { key: "black", label: "Black", sample: "#0c0c0d", text: "#f5f5f5" },
     { key: "white", label: "White", sample: "#ffffff", text: "#161616" },
     { key: "navy", label: "Midnight Blue", sample: "#0b1c35", text: "#eef4ff" },
+    { key: "emerald", label: "Emerald Green & Gold", sample: "#063d37", text: "#f5df9c" },
+    { key: "royal", label: "Royal Purple", sample: "#372044", text: "#f4d3f5" },
   ];
   return <div className="card-surface max-w-2xl rounded-xl p-5">
     <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Palette size={21} className="gold-text" /> Website Appearance</h2>
