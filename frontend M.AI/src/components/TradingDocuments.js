@@ -4,7 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { Btn, Field, Input, Modal } from "@/components/kit";
 import { previewBlob, printWindow } from "@/lib/documentPreview";
 import { toast } from "sonner";
-import { FileText, Folder, Plus, Trash2, Check } from "lucide-react";
+import { FileText, FolderOpen, FilePenLine, Plus, Trash2, Check } from "lucide-react";
 
 const today = () => new Date().toLocaleDateString("sv-SE");
 const newRow = () => ({date:today(), name:"", chassis:"", gross:""});
@@ -94,14 +94,14 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
     try{await Promise.all(selected.map(id=>api.delete("/paper/"+encodeURIComponent(id))));setDocs(v=>v.filter(d=>!selected.includes(d.id)));setSelected([]);toast.success("Invoice deleted");}catch(e){failed(e);}
   }
   const total=rows.reduce((n,r)=>n+Number(r.gross||0),0),net=Math.round(total*10/11);
-  const newActionCard = "flex h-[68px] w-[104px] flex-col items-center justify-center rounded-xl border border-[#806b3a] bg-white/[0.03] p-2 text-center transition hover:border-[var(--gold)]/70";
-  const savedActionCard = "flex h-[104px] w-[104px] flex-col items-center justify-center rounded-xl border border-border bg-white/[0.03] p-2 text-center transition hover:border-[var(--gold)]/70";
+  const newActionCard = "group flex h-[78px] w-[116px] flex-col items-center justify-center rounded-xl border border-[var(--gold)]/50 bg-gradient-to-b from-[#55462b]/40 to-white/[0.02] p-2 text-center shadow-[0_4px_18px_rgba(177,145,73,0.12)] transition hover:-translate-y-1 hover:border-[var(--gold)] hover:shadow-[0_8px_24px_rgba(177,145,73,0.22)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
+  const savedActionCard = "group relative mt-5 flex h-[104px] w-[116px] flex-col items-center justify-center rounded-xl border border-[var(--gold)]/30 bg-gradient-to-br from-[#403925]/50 via-white/[0.04] to-white/[0.01] p-2 text-center shadow-lg transition hover:-translate-y-1 hover:border-[var(--gold)]/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
   return <div className={compact ? "grid justify-items-center gap-4" : "mb-4 flex flex-wrap gap-2"}>
     {compact ? <>
-      <button type="button" onClick={start} className={newActionCard}><span className="text-[var(--gold)]"><FileText size={20} strokeWidth={1.5} /></span><span className="mt-1 block font-head text-[11px] font-bold leading-tight text-white">{invoiceKind==="custom"?"Custom Invoice":"Main Invoice"}</span><span className="mt-0.5 block text-[9px] text-muted-foreground">New</span></button>
-      <button type="button" onClick={()=>setMode("archive")} className={savedActionCard}><span className="text-[var(--gold)]"><Folder size={22} /></span><span className="mt-2 block font-head text-[11px] font-bold leading-tight text-white">{invoiceKind==="custom"?"Saved Custom Invoices":"Saved Invoices"}</span><span className="mt-0.5 block text-[9px] text-muted-foreground">Folder</span></button>
-    </> : <><Btn onClick={start}>Manual Invoice</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
-    <Modal open={mode==="manual"} onClose={()=>setMode("")} title={invoiceKind==="custom"?"New Custom Invoice":"New Main Invoice"} wide>
+      <button type="button" onClick={start} className={newActionCard}><span className="text-[var(--gold)]"><FilePenLine size={26} strokeWidth={1.6} /></span><span className="mt-1 block font-head text-[11px] font-bold leading-tight text-white">{invoiceKind==="custom"?"Custom Invoice":"Purchase Invoice"}</span><span className="mt-0.5 block text-[9px] text-muted-foreground">New</span></button>
+      <button type="button" onClick={()=>setMode("archive")} className={savedActionCard}><span aria-hidden="true" className="absolute -top-2 left-3 h-3 w-10 rounded-t-md border border-b-0 border-[var(--gold)]/40 bg-[#66522d]" /><span className="text-[var(--gold)] drop-shadow-[0_2px_5px_rgba(177,145,73,0.3)]"><FolderOpen size={35} strokeWidth={1.5} /></span><span className="mt-2 block font-head text-[11px] font-bold leading-tight text-white">{invoiceKind==="custom"?"Saved Custom Invoices":"Saved Invoices"}</span><span className="mt-0.5 block text-[9px] text-muted-foreground">Folder</span></button>
+    </> : <><Btn onClick={start}>{invoiceKind==="custom"?"Custom Invoice":"Purchase Invoice"}</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
+    <Modal open={mode==="manual"} onClose={()=>setMode("")} title={invoiceKind==="custom"?"New Custom Invoice":"New Purchase Invoice"} wide>
       <p className="my-2">To · {settings?.name} · {settings?.address} · {settings?.phone}</p>
       <form onSubmit={e=>{e.preventDefault();save();}} onChange={()=>{requestId.current=crypto.randomUUID();}}>
       <div className="grid gap-x-3 sm:grid-cols-2">{[["name","From · Seller"],["address","Address"],["phone","Phone"],["bank_details","Bank details (optional)"]].map(([k,label])=><Field key={k} label={label}><Input required={k==="name"} value={seller[k]||""} onChange={e=>setSeller({...seller,[k]:e.target.value})}/></Field>)}<TaxId value={seller} onChange={setSeller}/></div>
