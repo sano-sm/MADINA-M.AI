@@ -6,7 +6,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Archive, ChevronLeft, Download, Eye, FilePlus, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
+import { ChevronLeft, Download, Eye, FilePlus, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
   const navigate = useNavigate();
@@ -71,7 +71,6 @@ export default function OwnerTools() {
 
   return <div>
     <PageHeader title={t("owner_tools")} />
-    <OwnerDocuments />
 
     {!openFolder && <div className="mb-5 grid max-w-3xl grid-cols-1 gap-5 sm:grid-cols-2">
       <button type="button" onClick={() => setOpenFolder("years")} className="card-surface group rounded-xl border border-[var(--gold)]/30 p-4 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70">
@@ -79,6 +78,9 @@ export default function OwnerTools() {
       </button>
       <button type="button" onClick={() => setOpenFolder("invoices")} className="card-surface group rounded-xl border border-border p-4 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
         <div className="flex items-center gap-3"><Folder className="h-9 w-9 text-[var(--gold)]" /><div><div className="font-head text-base font-bold text-white">Invoices</div><div className="mt-1 text-xs text-muted-foreground">Folder ready for invoice tools</div></div></div>
+      </button>
+      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface group rounded-xl border border-border p-4 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
+        <div className="flex items-center gap-3"><Folder className="h-9 w-9 text-[var(--gold)]" /><div><div className="font-head text-base font-bold text-white">Fiscal Years</div><div className="mt-1 text-xs text-muted-foreground">Close, reopen, and view snapshots</div></div></div>
       </button>
     </div>}
 
@@ -100,19 +102,16 @@ export default function OwnerTools() {
     {openFolder === "invoices" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
       <div className="mb-5 flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <InvoiceFolderCard icon={<FilePlus size={20} />} title="Manual Invoice" description="Create a new manual invoice" />
-        <InvoiceFolderCard icon={<FilePlus size={20} />} title="Custom Invoice" description="Create a new custom invoice" />
-        <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Invoices" description="Saved manual invoices" />
-        <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Custom Invoices" description="Saved custom invoices" />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="rounded-xl border border-border bg-white/[0.03] p-3"><OwnerDocuments /></div>
+        <div className="grid gap-3">
+          <InvoiceFolderCard icon={<FilePlus size={20} />} title="Custom Invoice" description="Create a new custom invoice" />
+          <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Custom Invoices" description="Saved custom invoices" />
+        </div>
       </div>
     </section>}
 
     <div className="grid gap-4 lg:grid-cols-2">
-      <section className="card-surface rounded-sm p-5">
-        <div className="mb-4 flex items-center gap-2"><Archive className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Fiscal Years</h2></div>
-        <p className="text-sm text-muted-foreground">Open Special Years above to browse the compact year folders.</p>
-      </section>
       <section className="card-surface rounded-sm p-5">
         <div className="mb-4 flex items-center gap-2"><Download className="gold-text" /><h2 className="font-head text-lg font-bold text-white">{t("full_backup_zip")}</h2></div>
         <p className="mb-4 text-sm text-muted-foreground">{t("full_backup_zip_hint")}</p>
