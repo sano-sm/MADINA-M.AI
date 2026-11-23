@@ -89,6 +89,37 @@ function Company({ t, manage }) {
           </label>
         )}
       </div>
+      <div className="mb-5 flex items-center gap-3 rounded-lg border border-border p-3">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--gold)] bg-[var(--surface-2)]">
+          {form.owner_photo_url ? <img src={form.owner_photo_url} alt="Owner profile" className="h-full w-full object-cover" /> : <Users size={25} className="gold-text" />}
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-bold">Owner Profile Photo</div>
+          <div className="text-xs text-muted-foreground">Shown above OWNER on the home screen.</div>
+        </div>
+        {manage && <label className="cursor-pointer rounded-lg border border-[var(--gold)]/60 p-2 text-[var(--gold)]" title="Change owner photo">
+          <span className="sr-only">Change owner photo</span><span aria-hidden="true">📷</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" data-testid="owner-photo-upload"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 1200000) { toast.error("Photo too large (maximum 1.2 MB)"); return; }
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const photo = reader.result;
+                try {
+                  const { id, ...payload } = { ...form, owner_photo_url: photo };
+                  await api.put("/settings", { ...payload, tax_rate: +payload.tax_rate });
+                  setForm(previous => ({ ...previous, owner_photo_url: photo }));
+                  reload();
+                  toast.success("Owner photo updated");
+                } catch (err) { toast.error(apiError(err)); }
+              };
+              reader.readAsDataURL(file);
+              e.target.value = "";
+            }} />
+        </label>}
+      </div>
       <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
         <Field label={t("name")}><Input data-testid="company-name" value={form.name} disabled={!manage} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
         <Field label={t("phone")}><Input value={form.phone} disabled={!manage} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
