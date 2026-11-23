@@ -1,3 +1,4 @@
+import { processContainerDraft } from "@/lib/assistantDrafts";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, MicOff, Search, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -150,6 +151,7 @@ function clickVisibleAdd() {
 
 export default function VoiceCommand({ kind, navigate, onClose }) {
   const [active, setActive] = useState(false);
+  const [speechLanguage, setSpeechLanguage] = useState("ur-PK");
   const [transcript, setTranscript] = useState("");
   const [history, setHistory] = useState([]);
   const [error, setError] = useState("");
@@ -161,7 +163,8 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
   const keepListening = useRef(false);
   const restartTimer = useRef(null);
   const session = useRef(0);
-  const language = useMemo(() => (document.documentElement.lang === "en" ? "en-US" : "ur-PK"), []);
+  // Speech language is independent of the website display language.
+  const language = speechLanguage === "en-US" ? "en" : "ur";
 
   const stop = () => {
     keepListening.current = false;
@@ -186,6 +189,8 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     setHistory((items) => [...items.slice(-4), query]);
     setReply("");
     setError("");
+    const sharedDraft = processContainerDraft(query);
+    if (sharedDraft) { setReply(sharedDraft.reply); return; }
     const requestedRecordAction = kind === "voice" ? parseMaiAction(query) : null;
     if (requestedRecordAction) {
       if (requestedRecordAction.error) { setError(requestedRecordAction.error); return; }
@@ -293,7 +298,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     setStatus("starting");
     const r = new Recognition();
     recognition.current = r;
-    r.lang = document.documentElement.lang === "ur" ? "ur-PK" : language;
+    r.lang = speechLanguage;
     r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
@@ -351,6 +356,15 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     {reply && <div role="status" className="max-w-xs rounded-lg bg-[#19191c] p-2 text-xs text-white shadow-lg">{reply}</div>}
     {busy && <div className="rounded bg-[#19191c] px-2 py-1 text-xs text-amber-300">Processing…</div>}
     <div className="flex items-center gap-1">
+      <label className="rounded bg-[#19191c] px-1 py-1 text-[11px] text-white">
+        Voice
+        <select aria-label="Voice recognition language" value={speechLanguage} onChange={(e) => { if (active || keepListening.current) stop(); setSpeechLanguage(e.target.value); }} className="ml-1 rounded bg-[#333] px-1 py-1 text-white">
+          <option value="ur-PK">اردو</option>
+          <option value="en-US">English</option>
+        </select>
+      </label>
+      <input aria-label="Type command in Urdu or English" value={transcript} onChange={(e) => setTranscript(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitTyped(); }} placeholder="اردو / English" className="w-24 rounded bg-[#19191c] px-2 py-2 text-xs text-white sm:w-36" />
+      <button type="button" onClick={submitTyped} aria-label="Send command" className="rounded bg-[#155f50] px-2 py-2 text-xs text-white">Send</button>
       <span className="rounded bg-[#19191c] px-1 text-[10px] text-white">{kind === "agent" ? "AI" : "MAI"}</span>
       <button type="button" aria-label={active ? "Stop listening" : "Start microphone"} title={listeningLabel} onClick={toggleListening}
         className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-white shadow-lg ${active ? "border-emerald-300 bg-emerald-600 animate-pulse" : status === "starting" || busy ? "border-yellow-300 bg-amber-500" : "border-gray-400 bg-gray-700"}`}>
