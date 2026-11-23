@@ -22,7 +22,7 @@ export default function ContainerTT() {
   const [tab, setTab] = useState("invoices");
   const { theme } = useSettings();
   // Folder appearance follows the website theme; existing records and calculations stay unchanged.
-  const folderDesign = theme === "black" ? "b" : theme === "royal" ? "c" : "a";
+  const folderDesign = theme === "black" ? "b" : (theme === "royal" || theme === "emerald") ? "c" : "a";
 
   return (
     <div>
