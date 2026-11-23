@@ -169,3 +169,45 @@ html[data-madina-theme="navy"] [style*="linear-gradient(155deg,#1c1c1f"] {
 html[data-madina-theme="white"] .card-surface { background: #fff; border-color: #c9ced6; }
 html[data-madina-theme="navy"] .card-surface { background: #102440; border-color: #355171; }
 html[data-madina-theme="white"] .text-muted-foreground { color: #525c6c !important; }
+
+/* White theme readability: scoped so Black and Midnight Blue remain unchanged. */
+html[data-madina-theme="white"] .quick-access-c {
+  border-color: #8c6a29 !important;
+  box-shadow: inset 0 -3px 0 #a57922, inset 0 1px 0 #ffffff;
+}
+html[data-madina-theme="white"] .quick-access-c,
+html[data-madina-theme="white"] .quick-access-c span,
+html[data-madina-theme="white"] .quick-access-c p {
+  color: #111111 !important;
+  font-weight: 700;
+}
+html[data-madina-theme="white"] .quick-access-c svg {
+  color: #70500d !important;
+  stroke-width: 2.4px;
+  opacity: 1;
+}
+html[data-madina-theme="white"] .quick-access-c .text-emerald-400,
+html[data-madina-theme="white"] .quick-access-c .text-emerald-500 {
+  color: #065f46 !important;
+}
+html[data-madina-theme="white"] .stat-card,
+html[data-madina-theme="white"] .card-surface {
+  border-color: #a9a9a9 !important;
+}
+html[data-madina-theme="white"] .stat-card .text-gray-400,
+html[data-madina-theme="white"] .stat-card .text-gray-500,
+html[data-madina-theme="white"] .card-surface .text-gray-400,
+html[data-madina-theme="white"] .card-surface .text-gray-500,
+html[data-madina-theme="white"] .text-muted-foreground {
+  color: #404040 !important;
+}
+html[data-madina-theme="white"] .stat-card svg,
+html[data-madina-theme="white"] .card-surface svg {
+  opacity: 1;
+}
+html[data-madina-theme="white"] h1,
+html[data-madina-theme="white"] h2,
+html[data-madina-theme="white"] h3 {
+  color: #111111;
+  font-weight: 800;
+}
