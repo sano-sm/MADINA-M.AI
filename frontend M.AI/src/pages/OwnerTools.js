@@ -117,6 +117,10 @@ export default function OwnerTools() {
 
     <Modal open={!!snapshot} onClose={() => setSnapshot(null)} title={snapshot?.label || t("view_snapshot")} wide>
       {snapshot && <div>
+        {snapshot.profit_summary && snapshot.closing_stock && <div className="mb-4 grid grid-cols-2 gap-3">
+          <Snap label="Closed Year · Net Profit" value={money(snapshot.profit_summary.net_profit || 0)} />
+          <Snap label="Closed Year · Remaining Stock" value={money(snapshot.closing_stock.total_value || 0)} />
+        </div>}
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Snap label={t("total_available")} value={money(snapshot.funds?.available || 0)} />
           <Snap label={t("receivable")} value={money(snapshot.funds?.receivable || 0)} />
