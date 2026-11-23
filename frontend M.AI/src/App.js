@@ -55,7 +55,7 @@ function PersistentVoice() {
 function Gate() {
   const { ready, locked, user, reconnectKey } = useAuth();
   if (!ready) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
-  if (locked) return <PinLock />;
+  if (locked) return <SettingsProvider><PinLock /></SettingsProvider>;
   if (!user) return <AppRoutes />;
   // key={reconnectKey} remounts the app subtree after a reconnect so every page
   // re-runs its mount fetch and existing records reload automatically.
