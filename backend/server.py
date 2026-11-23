@@ -268,6 +268,7 @@ class CompanySettings(BaseModel):
     phone: str = "090-1570-0433"
     email: str = "MTC.jp09@gmail.com"
     logo_url: str = "/logo.png"
+    owner_photo_url: str = ""
     tax_rate: float = 10.0
     invoice_prefix: str = "MTC-"
     currency: str = "JPY"
