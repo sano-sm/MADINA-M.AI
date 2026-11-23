@@ -4255,12 +4255,16 @@ async def owner_annual_summary(fiscal_year_start: int, user: dict = Depends(requ
     if fiscal_year_start < 2000 or fiscal_year_start > 2200:
         raise HTTPException(status_code=400, detail="Invalid year")
     snap = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
+    prior_snapshot = await sdb.fiscal_snapshots.find_one(
+        {"fiscal_year_start": fiscal_year_start - 1},
+        {"_id": 0, "closing_stock": 1})
+    opening_stock = round(float(((prior_snapshot or {}).get("closing_stock") or {}).get("total_value") or 0), 2)
     if snap and snap.get("annual_summary"):
-        return {"summary": snap["annual_summary"], "closing_stock": snap.get("closing_stock"),
+        return {"summary": {**snap["annual_summary"], "opening_stock": opening_stock}, "closing_stock": snap.get("closing_stock"),
                 "closed": True, "closed_at": snap.get("close_date")}
     summary = await build_owner_annual_summary(fiscal_year_start)
     stock = await compute_stock_valuation() if fiscal_year_start == _current_fiscal_year_start(current_company.get()) else None
-    return {"summary": summary, "closing_stock": stock, "closed": bool(snap), "closed_at": (snap or {}).get("close_date")}
+    return {"summary": {**summary, "opening_stock": opening_stock}, "closing_stock": stock, "closed": bool(snap), "closed_at": (snap or {}).get("close_date")}
 
 
 @api.get("/owner/fiscal-years")
