@@ -7,11 +7,11 @@ export const useSettings = () => useContext(SettingsContext);
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(null);
   const [theme, setThemeState] = useState(() => {
-    try { return ["black", "white", "navy"].includes(localStorage.getItem("madina-ui-theme")) ? localStorage.getItem("madina-ui-theme") : "black"; }
+    try { return ["black", "white", "navy", "emerald", "royal"].includes(localStorage.getItem("madina-ui-theme")) ? localStorage.getItem("madina-ui-theme") : "black"; }
     catch { return "black"; }
   });
   const setTheme = useCallback((next) => {
-    if (!["black", "white", "navy"].includes(next)) return;
+    if (!["black", "white", "navy", "emerald", "royal"].includes(next)) return;
     setThemeState(next);
     try { localStorage.setItem("madina-ui-theme", next); } catch {}
   }, []);
