@@ -6,7 +6,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Archive, ChevronLeft, Download, Eye, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
+import { Archive, ChevronLeft, Download, Eye, FilePlus, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
   const navigate = useNavigate();
@@ -83,7 +83,8 @@ export default function OwnerTools() {
     </div>}
 
     {openFolder === "years" && <section className="card-surface mb-5 rounded-sm p-5">
-      <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">Special Years</h2><p className="text-xs text-muted-foreground">Select a year to open its accounting summary.</p></div></div><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
+      <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
+      <div className="mb-4 flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">Special Years</h2><p className="text-xs text-muted-foreground">Select a year to open its accounting summary.</p></div></div>
       <div className="grid max-w-4xl grid-cols-3 gap-4">
         {years.map((y) => <div key={y.fiscal_year_start} className="rounded-xl border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
           <button type="button" onClick={() => openYear(y)} className="flex min-h-20 w-full flex-col items-center justify-center rounded-lg text-center hover:bg-[var(--gold)]/10"><div className="font-head text-xl font-bold tracking-wide text-white">{y.fiscal_year_start}</div><div className="mt-1 text-[11px] text-muted-foreground">{y.label}</div><Badge tone={y.closed ? "green" : "gold"}>{y.closed ? t("year_closed") : t("year_open")}</Badge></button>
@@ -97,8 +98,14 @@ export default function OwnerTools() {
     </section>}
 
     {openFolder === "invoices" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
-      <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
-      <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Invoice tools will be added inside this folder.</div>
+      <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
+      <div className="mb-5 flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <InvoiceFolderCard icon={<FilePlus size={20} />} title="Manual Invoice" description="Create a new manual invoice" />
+        <InvoiceFolderCard icon={<FilePlus size={20} />} title="Custom Invoice" description="Create a new custom invoice" />
+        <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Invoices" description="Saved manual invoices" />
+        <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Custom Invoices" description="Saved custom invoices" />
+      </div>
     </section>}
 
     <div className="grid gap-4 lg:grid-cols-2">
@@ -138,3 +145,8 @@ export default function OwnerTools() {
 
 function Snap({ label, value }) { return <div className="rounded-sm bg-white/5 p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-bold gold-text">{value}</div></div>; }
 function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold text-white">{title}</h3><div className="max-h-56 space-y-1 overflow-auto text-xs text-muted-foreground">{rows.length ? rows.map((x, i) => <div key={i} className="border-b border-border py-1">{x}</div>) : <div>—</div>}</div></div>; }
+function InvoiceFolderCard({ icon, title, description }) {
+  return <div className="rounded-xl border border-border bg-white/[0.03] p-4 transition hover:border-[var(--gold)]/60">
+    <div className="flex items-center gap-3"><div className="rounded-lg bg-[var(--gold)]/10 p-2 text-[var(--gold)]">{icon}</div><div className="min-w-0"><div className="font-head text-sm font-bold text-white">{title}</div><div className="mt-1 text-xs text-muted-foreground">{description}</div></div></div>
+  </div>;
+}
