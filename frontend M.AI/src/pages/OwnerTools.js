@@ -124,6 +124,7 @@ export default function OwnerTools() {
                   <thead className="bg-[#101f31] text-slate-200"><tr><th className="p-3">Item</th><th className="p-3 text-right">Total</th></tr></thead>
                   <tbody className="divide-y divide-[#304358]">
                     {[
+                      ["Opening Stock — Previous Year","opening_stock"],
                       ["Total Purchasing — Cars, Parts & Others","purchasing_total"],
                       ["Dismantled Cars (Total)","dismantled_count","count"],
                       ["Dismantled Cars Purchase Value","dismantled_purchase_value"],
