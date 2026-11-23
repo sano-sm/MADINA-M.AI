@@ -4358,7 +4358,7 @@ async def combined_export(fmt: str, body: CombinedExport, user: dict = Depends(r
 
 
 # Standalone invoice documents never post inventory, payments or accounting entries.
-from paperwork import invoice_pdf, printable_markup
+from paperwork import invoice_pdf, auto_parts_invoice_pdf, printable_markup
 from uuid import UUID
 from decimal import Decimal
 from fastapi import UploadFile, File
@@ -4483,6 +4483,52 @@ async def issue_document(body: PaperRequest, user: dict = Depends(get_current_us
     doc["pdf"] = base64.b64encode(binary).decode()
     await db.issued_documents.update_one({"_id": key}, {"$setOnInsert": doc}, upsert=True)
     return {"id": doc["id"]}
+
+
+class AutoPartsLine(BaseModel):
+    number: str = Field(default="", max_length=80)
+    price: Optional[int] = Field(default=None, ge=0, le=999999999999)
+
+
+class AutoPartsRequest(BaseModel):
+    request_id: UUID
+    loading_date: date
+    engines: List[AutoPartsLine] = Field(default_factory=list, max_length=600)
+    chassis: List[AutoPartsLine] = Field(default_factory=list, max_length=12)
+    parts: List[AutoPartsLine] = Field(default_factory=list, max_length=40)
+
+
+@api.post("/paper/auto-parts")
+async def issue_auto_parts_invoice(body: AutoPartsRequest, user: dict = Depends(require("settings.manage"))):
+    cid = current_company.get()
+    key = f"{cid}:{user['id']}:{body.request_id}"
+    doc_id = str(uuid.uuid5(uuid.NAMESPACE_URL, key))
+    existing = await sdb.issued_documents.find_one({"id": doc_id}, {"_id": 0, "id": 1})
+    if existing:
+        return {"id": existing["id"]}
+    settings = await sdb.settings.find_one({"id": settings_id()}, {"_id": 0}) or {}
+    if not settings.get("name"):
+        raise HTTPException(400, "Save company name in Settings first")
+    sections = {name: [r.model_dump() for r in getattr(body, name)] for name in ("engines", "chassis", "parts")}
+    if not any(r["number"].strip() for rows in sections.values() for r in rows):
+        raise HTTPException(400, "Enter at least one engine, chassis, or part")
+    for rows in sections.values():
+        for row in rows:
+            if row["price"] is not None and not row["number"].strip():
+                raise HTTPException(400, "Enter a number or description for each priced item")
+    counter = await db.settings.find_one_and_update(
+        {"id": settings_id(), "company_id": cid},
+        {"$inc": {"paper_invoice_seq": 1}, "$setOnInsert": {"id": settings_id(), "company_id": cid}},
+        upsert=True, return_document=ReturnDocument.AFTER)
+    seq = int((counter or {}).get("paper_invoice_seq", 1))
+    year = datetime.now(timezone(timedelta(hours=9))).strftime("%y")
+    doc = {"id": doc_id, "kind": "custom", "company_id": cid, "created_by": user["id"],
+           "number": f"{cid}{year}-{seq:03d}", "date": datetime.now(timezone(timedelta(hours=9))).date().isoformat(),
+           "loading_date": body.loading_date.isoformat(), "from": settings, "to": settings,
+           "party": settings["name"], "sections": sections, "created_at": now_iso()}
+    doc["pdf"] = base64.b64encode(auto_parts_invoice_pdf(doc)).decode()
+    await db.issued_documents.update_one({"_id": key}, {"$setOnInsert": doc}, upsert=True)
+    return {"id": doc_id}
 
 
 @api.get("/paper/archive")
