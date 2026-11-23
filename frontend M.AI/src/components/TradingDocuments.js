@@ -180,9 +180,10 @@ function AutoPartsEditor({value,onChange,company,invoiceNumber,busy,onSave}) {
     </div>;
   }
   return <div dir="ltr" className="text-left">
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--gold)]/50 pb-3">
+    <div className="relative flex flex-wrap items-start justify-between gap-3 border-b border-[var(--gold)]/50 pb-3">
       <div><h2 className="font-head text-lg font-bold text-white">{company?.name||"MADINA TRADING"}</h2><p className="max-w-xs whitespace-pre-line text-xs text-muted-foreground">{company?.address||"Company address from Settings"}</p></div>
-      <div className="flex flex-col items-end gap-2"><div className="text-right text-[10px] leading-tight text-muted-foreground">Invoice No.<div className="mt-0.5 font-head text-xs font-semibold text-white">{invoiceNumber||"Assigned on save"}</div></div><label className="text-xs text-white">Loading Date <input type="date" className="mt-1 block rounded border border-border bg-background p-2 text-white" value={value.loading_date} onChange={e=>onChange({...value,loading_date:e.target.value})}/></label></div>
+      <div className="flex flex-col items-end gap-2"><label className="text-xs text-white">Loading Date <input type="date" className="mt-1 block rounded border border-border bg-background p-2 text-white" value={value.loading_date} onChange={e=>onChange({...value,loading_date:e.target.value})}/></label></div>
+      <div className="absolute right-0 top-0 -translate-y-full pb-1 text-right text-[10px] leading-tight text-muted-foreground">Invoice No. <span className="font-head text-xs font-semibold text-white">{invoiceNumber||"Assigned on save"}</span></div>
     </div>
     <div className="mt-2 text-right text-sm font-bold text-white">Grand Total: {money(sum)}</div>
     {Array.from({length:value.engines.length/60},(_,page)=>list("ENGINE LIST — Sheet "+(page+1),"engines",page*60,30))}
