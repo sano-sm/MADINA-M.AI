@@ -24,6 +24,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 from pydantic import BaseModel, Field, EmailStr
 
 from reportlab.lib.pagesizes import A4, landscape
@@ -4466,8 +4467,16 @@ async def issue_document(body: PaperRequest, user: dict = Depends(get_current_us
         row["gross"] = int(price)
     fields = ("name","phone","address","email","tax_id","bank_details","bank_name","branch","branch_code","account_number","account_name")
     source, target = (settings,party) if body.kind == "customer" else (party,settings)
+    invoice_year = datetime.now(timezone(timedelta(hours=9))).strftime("%y")
+    counter = await db.settings.find_one_and_update(
+        {"id": settings_id(), "company_id": cid},
+        {"$inc": {"paper_invoice_seq": 1}, "$setOnInsert": {"id": settings_id(), "company_id": cid}},
+        upsert=True, return_document=ReturnDocument.AFTER,
+    )
+    sequence = int((counter or {}).get("paper_invoice_seq", 1))
+    number_prefix = "INV" if body.kind == "manual" else cid
     doc = {"id": str(uuid.uuid5(uuid.NAMESPACE_URL,key)), "kind": body.kind, "company_id": cid, "created_by": user["id"],
-           "number": f"{cid}-{uuid.uuid5(uuid.NAMESPACE_URL,key).hex[:16].upper()}", "date": datetime.now(timezone(timedelta(hours=9))).date().isoformat(),
+           "number": f"{number_prefix}{invoice_year}-{sequence:03d}", "date": datetime.now(timezone(timedelta(hours=9))).date().isoformat(),
            "from": {k: source.get(k) for k in fields}, "to": {k: target.get(k) for k in ("name","phone","address")},
            "party": party["name"], "rows": rows, "created_at": now_iso()}
     binary = invoice_pdf(doc)
@@ -4483,6 +4492,16 @@ async def archive_search(q: str = "", user: dict = Depends(require("settings.man
         term = {"$regex": re.escape(q.strip()[:120]), "$options": "i"}
         cond["$or"] = [{k: term} for k in ("number","party","rows.name","rows.chassis")]
     return await sdb.issued_documents.find(cond, {"_id":0,"id":1,"number":1,"party":1,"date":1}).sort("created_at",-1).to_list(None)
+
+
+@api.delete("/paper/{doc_id}")
+async def delete_document(doc_id: str, user: dict = Depends(require("settings.manage"))):
+    doc = await sdb.issued_documents.find_one({"id": doc_id}, {"_id": 0, "number": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    await sdb.issued_documents.delete_one({"id": doc_id})
+    await audit(user, "delete", "issued_document", f"Deleted invoice {doc.get('number', doc_id)}")
+    return {"ok": True}
 
 
 @api.get("/paper/{doc_id}/pdf")

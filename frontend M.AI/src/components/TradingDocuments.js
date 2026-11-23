@@ -4,7 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { Btn, Field, Input, Modal } from "@/components/kit";
 import { previewBlob, printWindow } from "@/lib/documentPreview";
 import { toast } from "sonner";
-import { FileText, Folder, Plus } from "lucide-react";
+import { FileText, Folder, Plus, Trash2, Check } from "lucide-react";
 
 const today = () => new Date().toLocaleDateString("sv-SE");
 const newRow = () => ({date:today(), name:"", chassis:"", gross:""});
@@ -77,13 +77,21 @@ export function IssuePanel({kind,party,fullReport}) {
 export function OwnerDocuments({compact=false}){
   const {settings}=useSettings();
   const [mode,setMode]=useState(""),[seller,setSeller]=useState({name:""}),[rows,setRows]=useState([]),[busy,setBusy]=useState(false);
-  const [q,setQ]=useState(""),[docs,setDocs]=useState([]);const requestId=useRef(""),lock=useRef(false);
-  useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q}}).then(r=>{if(current)setDocs(r.data);}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q]);
+  const [q,setQ]=useState(""),[docs,setDocs]=useState([]),[selected,setSelected]=useState([]);const requestId=useRef(""),lock=useRef(false),pressTimer=useRef(null),suppressClick=useRef(false);
+  useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q}}).then(r=>{if(current){setDocs(r.data);setSelected([]);}}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q]);
   useEffect(()=>{const id=new URLSearchParams(window.location.search).get("record");if(id)readDocument(id).catch(failed);},[]);
   function start(){setSeller({name:""});setRows([newRow()]);requestId.current=crypto.randomUUID();setMode("manual");}
   async function save(){
     if(lock.current)return;lock.current=true;setBusy(true);
     try{const {data}=await api.post("/paper",{kind:"manual",request_id:requestId.current,seller,rows});await readDocument(data.id);setMode("");}catch(e){failed(e);}finally{lock.current=false;setBusy(false);}
+  }
+  function toggleSelected(id){setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);}
+  function startPress(id){suppressClick.current=false;clearTimeout(pressTimer.current);pressTimer.current=setTimeout(()=>{suppressClick.current=true;toggleSelected(id);},550);}
+  function endPress(){clearTimeout(pressTimer.current);}
+  async function removeSelected(){
+    if(!selected.length)return;
+    if(!window.confirm(`Delete ${selected.length} selected invoice${selected.length>1?"s":""}?`))return;
+    try{await Promise.all(selected.map(id=>api.delete("/paper/"+encodeURIComponent(id))));setDocs(v=>v.filter(d=>!selected.includes(d.id)));setSelected([]);toast.success("Invoice deleted");}catch(e){failed(e);}
   }
   const total=rows.reduce((n,r)=>n+Number(r.gross||0),0),net=Math.round(total*10/11);
   const newActionCard = "flex h-[68px] w-[104px] flex-col items-center justify-center rounded-xl border border-[#806b3a] bg-white/[0.03] p-2 text-center transition hover:border-[var(--gold)]/70";
@@ -102,10 +110,11 @@ export function OwnerDocuments({compact=false}){
       <div className="my-4">Subtotal {money(net)} · Tax (10%) {money(total-net)} · Total {money(total)}</div>
       <button className="gold-gradient rounded p-2 text-black" disabled={busy}>Confirm invoice</button></form>
     </Modal>
-    <Modal open={mode==="archive"} onClose={()=>setMode("")} title="Saved invoices" wide><Input placeholder="Invoice number, company, vehicle or chassis" value={q} onChange={e=>setQ(e.target.value)}/>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">{docs.map(d=><button className="card-surface flex min-h-24 items-center gap-3 rounded-lg border border-border p-4 text-start transition hover:border-[var(--gold)]/70" key={d.id} onClick={()=>readDocument(d.id).catch(failed)}>
-        <span className="rounded-md bg-[var(--gold)]/10 p-2 text-[var(--gold)]"><FileText size={22} /></span><span className="min-w-0"><span className="block text-[10px] uppercase tracking-wide text-muted-foreground">Invoice No.</span><b className="block truncate text-sm text-white">{d.number || "—"}</b><span className="mt-1 block text-xs text-muted-foreground">Date: {String(d.date || "—").slice(0, 10)}</span></span>
-      </button>)}</div></Modal></div>;
+    <Modal open={mode==="archive"} onClose={()=>setMode("")} title="Saved invoices" wide><div className="flex items-center gap-2"><Input placeholder="Invoice number, company, vehicle or chassis" value={q} onChange={e=>setQ(e.target.value)}/><button type="button" aria-label="Delete selected invoices" title="Delete selected" disabled={!selected.length} onClick={removeSelected} className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition hover:border-red-400 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"><Trash2 size={17}/></button></div>
+      <p className="mt-2 text-[10px] text-muted-foreground">Tap a card to open PDF · press and hold to select</p>
+      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-3 lg:grid-cols-10">{docs.map(d=>{const isSelected=selected.includes(d.id);return <button type="button" className={`relative flex aspect-[.72] min-w-0 flex-col items-center justify-between overflow-hidden rounded-md border p-1.5 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--gold)]/80 ${isSelected?"border-red-400 bg-red-500/10 ring-2 ring-red-400/40":"border-slate-300/30 bg-white"}`} key={d.id} onPointerDown={()=>startPress(d.id)} onPointerUp={endPress} onPointerCancel={endPress} onPointerLeave={endPress} onClick={()=>{if(suppressClick.current){suppressClick.current=false;return;}readDocument(d.id).catch(failed);}}>
+        <span className="absolute left-0 top-0 h-1 w-full bg-red-500"/><span className={`mt-1 grid h-8 w-7 place-items-center rounded-sm border text-red-500 ${isSelected?"border-red-400 bg-red-100":"border-slate-300 bg-slate-50"}`}>{isSelected?<Check size={16}/>:<FileText size={17}/>}</span><span className="min-w-0 max-w-full"><span className="block truncate text-[8px] font-bold uppercase tracking-tight text-slate-500">Invoice No.</span><b className="block truncate text-[10px] leading-tight text-slate-900">{d.number || "—"}</b><span className="mt-1 block truncate text-[9px] text-slate-500">{String(d.date || "—").slice(0,10)}</span></span><span className="mb-0.5 text-[7px] font-bold uppercase tracking-wider text-red-500">PDF</span>
+      </button>})}</div></Modal></div>;
 }
 
 export function SearchRecords({close,navigate,initialQuery=""}){
