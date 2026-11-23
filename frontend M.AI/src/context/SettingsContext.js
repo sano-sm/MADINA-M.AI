@@ -6,6 +6,18 @@ export const useSettings = () => useContext(SettingsContext);
 
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(null);
+  const [theme, setThemeState] = useState(() => {
+    try { return ["black", "white", "navy"].includes(localStorage.getItem("madina-ui-theme")) ? localStorage.getItem("madina-ui-theme") : "black"; }
+    catch { return "black"; }
+  });
+  const setTheme = useCallback((next) => {
+    if (!["black", "white", "navy"].includes(next)) return;
+    setThemeState(next);
+    try { localStorage.setItem("madina-ui-theme", next); } catch {}
+  }, []);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-madina-theme", theme);
+  }, [theme]);
 
   const load = useCallback(() => {
     api.get("/settings").then((r) => setSettings(r.data)).catch(() => {});
@@ -20,7 +32,7 @@ export function SettingsProvider({ children }) {
   }, [settings]);
 
   return (
-    <SettingsContext.Provider value={{ settings, reload: load, money }}>
+    <SettingsContext.Provider value={{ settings, reload: load, money, theme, setTheme }}>
       {children}
     </SettingsContext.Provider>
   );
