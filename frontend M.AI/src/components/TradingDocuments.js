@@ -96,7 +96,7 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
   }
   const total=rows.reduce((n,r)=>n+Number(r.gross||0),0),net=Math.round(total*10/11);
   const newActionCard = "group flex h-[56px] w-[96px] items-center justify-center rounded-lg border border-[var(--gold)]/35 bg-white/[0.025] px-1.5 text-center transition hover:border-[var(--gold)]/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
-  const savedActionCard = "group relative mt-2 h-[79px] w-[101px] cursor-pointer border-0 bg-transparent p-0 text-center transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
+  const savedActionCard = "group relative mt-4 h-[79px] w-[101px] cursor-pointer border-0 bg-transparent p-0 text-center transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
   return <div className={compact ? "grid justify-items-center gap-4" : "mb-4 flex flex-wrap gap-2"}>
     {compact ? <>
       <button type="button" onClick={start} className={newActionCard}><span className="flex flex-col items-start leading-none"><span className="text-[8px] font-light tracking-normal text-muted-foreground">{invoiceKind==="custom"?"Custom":"Purchase"}</span><span className="mt-1 font-head text-[11px] font-semibold tracking-normal text-white">INVOICE</span></span><span className={`${invoiceKind==="custom"?"order-first mr-1":"ml-1"} self-center text-[var(--gold)]`}><FilePenLine size={15} strokeWidth={1.25} /></span></button>
