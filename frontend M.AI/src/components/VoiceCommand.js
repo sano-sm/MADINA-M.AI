@@ -152,6 +152,10 @@ function clickVisibleAdd() {
 export default function VoiceCommand({ kind, navigate, onClose }) {
   const [active, setActive] = useState(false);
   const [speechLanguage, setSpeechLanguage] = useState("ur-PK");
+  const [recording, setRecording] = useState(false);
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const recorderRef = useRef(null);
+  const streamRef = useRef(null);
   const [transcript, setTranscript] = useState("");
   const [history, setHistory] = useState([]);
   const [error, setError] = useState("");
@@ -167,6 +171,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
   const language = speechLanguage === "en-US" ? "en" : "ur";
 
   const stop = () => {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
     keepListening.current = false;
     session.current += 1;
     window.clearTimeout(restartTimer.current);
@@ -181,6 +186,8 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     session.current += 1;
     window.clearTimeout(restartTimer.current);
     try { recognition.current?.abort(); } catch (e) { /* component is closing */ }
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    streamRef.current?.getTracks().forEach((track) => track.stop());
   }, []);
 
   const runCommand = async (rawText) => {
@@ -291,12 +298,9 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
   };
 
   const start = async (isRestart = false) => {
+    if (fallbackMode || !(window.SpeechRecognition || window.webkitSpeechRecognition)) { await startRecordedSpeech(); return; }
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) {
-      setError(language === "en" ? "Voice recognition is not supported here. Type your search below, or try Chrome on Android/desktop." : "اس براوزر میں وائس ریکگنیشن دستیاب نہیں۔ نیچے تلاش لکھیں، یا Chrome Android/desktop پر آزمائیں۔");
-      setStatus("unsupported");
-      return;
-    }
+
     const currentSession = isRestart ? session.current : ++session.current;
     keepListening.current = true;
     setError("");
@@ -357,7 +361,10 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
         "language-not-supported": "یہ Speech Recognition زبان اس براؤزر میں دستیاب نہیں۔ دوسری زبان منتخب کریں یا لکھ کر کمانڈ دیں۔",
         "audio-capture": language === "en" ? "No microphone was found on this device." : "اس ڈیوائس پر مائیکروفون نہیں ملا۔",
       };
-      setError(messages[event.error] || `${language === "en" ? "Microphone" : "مائیکروفون"}: ${event.error}`);
+      if (["service-not-allowed", "language-not-supported", "network"].includes(event.error)) {
+        setFallbackMode(true);
+        setError("Browser speech service unavailable. دوبارہ مائیکروفون دبائیں؛ اب ریکارڈنگ کے ذریعے آواز سمجھنے کی کوشش ہوگی۔");
+      } else setError(messages[event.error] || `${language === "en" ? "Microphone" : "مائیکروفون"}: ${event.error}`);
       setActive(false);
       setStatus("error");
       keepListening.current = false;
@@ -380,7 +387,58 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     }
   };
 
-  const toggleListening = () => { if (active || keepListening.current) stop(); else start(); };
+  // Recording is opt-in and sent only when the user taps Stop.
+  const startRecordedSpeech = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setError("Audio recording is unavailable in this browser. Use the text command field.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const supported = ["audio/mp4", "audio/webm", "audio/ogg"].find((mime) => MediaRecorder.isTypeSupported(mime));
+      const recorder = supported ? new MediaRecorder(stream, { mimeType: supported }) : new MediaRecorder(stream);
+      const chunks = [];
+      streamRef.current = stream;
+      recorderRef.current = recorder;
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = async () => {
+        setRecording(false);
+        setActive(false);
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        if (!chunks.length) { setError("No audio recorded. Try again."); return; }
+        const audio = new Blob(chunks, { type: recorder.mimeType || "audio/mp4" });
+        if (audio.size > 10000000) { setError("Recording too large. Keep each command short."); return; }
+        setBusy(true);
+        setError("");
+        try {
+          const result = await api.post(`/assistant/transcribe?language=${speechLanguage === "en-US" ? "en" : "ur"}`, audio, {
+            headers: { "Content-Type": audio.type }, timeout: 55000,
+          });
+          const words = result.data?.text?.trim();
+          if (!words) { setError("No speech detected. Try again."); return; }
+          setTranscript(words);
+          await runCommand(words);
+        } catch (err) {
+          setError(err.response?.data?.detail || "Server speech transcription unavailable. Configure OPENAI_API_KEY on Render or type the command.");
+        } finally { setBusy(false); }
+      };
+      recorder.start();
+      setRecording(true);
+      setActive(true);
+      setStatus("listening");
+      setError("");
+      setReply("Recording… بولیں، پھر مائیکروفون دوبارہ دبا کر آواز بھیجیں۔");
+    } catch (err) {
+      setError(err?.name === "NotAllowedError"
+        ? "Microphone permission denied. Safari website settings → Microphone → Allow."
+        : "Unable to start audio recording: " + (err?.message || "unknown error"));
+    }
+  };
+  const toggleListening = () => {
+    if (recording) { recorderRef.current?.stop(); return; }
+    if (active || keepListening.current) stop(); else start();
+  };
   const submitTyped = () => { const value = transcript.trim(); if (value) runCommand(value); };
   const listeningLabel = status === "starting" ? (language === "en" ? "Starting microphone…" : "مائیکروفون شروع ہو رہا ہے…") : active ? (language === "en" ? "Listening…" : "سن رہا ہے…") : (language === "en" ? "Tap microphone to start" : "شروع کرنے کے لیے مائیکروفون دبائیں");
 
@@ -400,7 +458,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       <input aria-label="Type command in Urdu or English" value={transcript} onChange={(e) => setTranscript(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitTyped(); }} placeholder="اردو / English" className="w-24 rounded bg-[#19191c] px-2 py-2 text-xs text-white sm:w-36" />
       <button type="button" onClick={submitTyped} aria-label="Send command" className="rounded bg-[#155f50] px-2 py-2 text-xs text-white">Send</button>
       <span className="rounded bg-[#19191c] px-1 text-[10px] text-white">{kind === "agent" ? "AI" : "MAI"}</span>
-      <button type="button" aria-label={active ? "Stop listening" : "Start microphone"} title={listeningLabel} onClick={toggleListening}
+      <button type="button" aria-label={active ? "Stop listening" : "Start microphone"} title={recording ? "Stop recording and transcribe" : listeningLabel} onClick={toggleListening}
         className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-white shadow-lg ${active ? "border-emerald-300 bg-emerald-600 animate-pulse" : status === "starting" || busy ? "border-yellow-300 bg-amber-500" : "border-gray-400 bg-gray-700"}`}>
         {active ? <Mic size={24} /> : <MicOff size={24} />}
       </button>
