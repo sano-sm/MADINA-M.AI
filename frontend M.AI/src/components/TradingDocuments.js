@@ -4,7 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { Btn, Field, Input, Modal } from "@/components/kit";
 import { previewBlob, printWindow } from "@/lib/documentPreview";
 import { toast } from "sonner";
-import { Folder, Plus } from "lucide-react";
+import { FileText, Folder, Plus } from "lucide-react";
 
 const today = () => new Date().toLocaleDateString("sv-SE");
 const newRow = () => ({date:today(), name:"", chassis:"", gross:""});
@@ -103,7 +103,9 @@ export function OwnerDocuments({compact=false}){
       <button className="gold-gradient rounded p-2 text-black" disabled={busy}>Confirm invoice</button></form>
     </Modal>
     <Modal open={mode==="archive"} onClose={()=>setMode("")} title="Saved invoices" wide><Input placeholder="Invoice number, company, vehicle or chassis" value={q} onChange={e=>setQ(e.target.value)}/>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">{docs.map(d=><button className="card-surface rounded p-3 text-start" key={d.id} onClick={()=>readDocument(d.id).catch(failed)}><b>{d.number}</b><br/>{d.party} · {d.date}</button>)}</div></Modal></div>;
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">{docs.map(d=><button className="card-surface flex min-h-24 items-center gap-3 rounded-lg border border-border p-4 text-start transition hover:border-[var(--gold)]/70" key={d.id} onClick={()=>readDocument(d.id).catch(failed)}>
+        <span className="rounded-md bg-[var(--gold)]/10 p-2 text-[var(--gold)]"><FileText size={22} /></span><span className="min-w-0"><span className="block text-[10px] uppercase tracking-wide text-muted-foreground">Invoice No.</span><b className="block truncate text-sm text-white">{d.number || "—"}</b><span className="mt-1 block text-xs text-muted-foreground">Date: {String(d.date || "—").slice(0, 10)}</span></span>
+      </button>)}</div></Modal></div>;
 }
 
 export function SearchRecords({close,navigate,initialQuery=""}){
