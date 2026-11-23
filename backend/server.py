@@ -2757,7 +2757,7 @@ async def compute_stock_valuation():
 @api.get("/reports/pnl")
 async def report_pnl(start: Optional[str] = None, end: Optional[str] = None,
                      user: dict = Depends(require("reports.view"))):
-    return await compute_pnl(start, end)
+    return await compute_pnl(start if start is not None else await _operating_period_start(), end)
 
 
 @api.get("/reports/stock")
@@ -2781,7 +2781,7 @@ async def auth_or_token(request: Request):
 @api.get("/reports/pnl/pdf")
 async def report_pnl_pdf(request: Request):
     await auth_or_token(request)
-    pnl = await compute_pnl()
+    pnl = await compute_pnl(start=await _operating_period_start())
     stock = await compute_stock_valuation()
     settings = await sdb.settings.find_one({"id": settings_id()}, {"_id": 0}) or CompanySettings().model_dump()
     pdf = build_report_pdf(pnl, stock, settings)
@@ -2867,7 +2867,8 @@ async def export_csv(entity: str, request: Request):
 
 @api.get("/dashboard")
 async def dashboard(user: dict = Depends(require("dashboard.view"))):
-    pnl = await compute_pnl()
+    active_start = await _operating_period_start()
+    pnl = await compute_pnl(start=active_start)
     stock = await compute_stock_valuation()
     vehicles_in = await sdb.vehicles.count_documents({"status": "in_stock"})
     vehicles_sold = await sdb.vehicles.count_documents({"status": {"$in": ["sold", "sold_complete"]}})
@@ -4130,7 +4131,8 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
         {"status": "dismantled", "recovery_status": {"$ne": "completed"}},
     ]}, {"_id": 0}).to_list(10000)
     close_date = now_iso()[:10]
-    period_start = f"{fiscal_year_start:04d}-{_fiscal_start_month(current_company.get()):02d}-01"
+    prior = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": fiscal_year_start - 1}, {"_id": 0, "close_date": 1})
+    period_start = _next_day(prior["close_date"]) if prior and prior.get("close_date") else f"{fiscal_year_start:04d}-{_fiscal_start_month(current_company.get()):02d}-01"
     period_profit = await compute_pnl(period_start, close_date)
     closing_stock = await compute_stock_valuation()
     return {
@@ -4138,6 +4140,7 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
         "label": _period_label(fiscal_year_start), "snapshot_at": now_iso(),
         "close_date": close_date, "period_start": period_start,
         "profit_summary": period_profit, "closing_stock": closing_stock,
+        "opening_stock": (prior or {}).get("closing_stock", {}).get("total_value", 0),
         "funds": await funds_summary(), "customers": customers,
         "brokers": brokers, "loans": loans, "active_vehicles": active_vehicles,
     }
@@ -4162,8 +4165,30 @@ async def owner_fiscal_years(user: dict = Depends(require("settings.manage"))):
                         for y in sorted(years, reverse=True)]}
 
 
+def _next_day(date_string: str) -> str:
+    return (datetime.strptime(date_string[:10], "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+async def _operating_period_start():
+    """Date after most recently closed owner year; no destructive record mutation."""
+    snap = await sdb.fiscal_snapshots.find_one(
+        {"close_date": {"$exists": True}}, {"_id": 0, "close_date": 1},
+        sort=[("close_date", -1)],
+    )
+    return _next_day(snap["close_date"]) if snap and snap.get("close_date") else None
+
+
 @api.post("/owner/fiscal-years/{fiscal_year_start}/close")
 async def owner_close_fiscal_year(fiscal_year_start: int, user: dict = Depends(require("settings.manage"))):
+    if fiscal_year_start < 2026 or fiscal_year_start > 2200:
+        raise HTTPException(status_code=400, detail="Invalid year")
+    existing_snapshot = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
+    if existing_snapshot:
+        raise HTTPException(status_code=409, detail="This year already has a saved close snapshot. Reopen and review before another close.")
+    later = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": {"$gte": fiscal_year_start + 1}}, {"_id": 0})
+    if later:
+        raise HTTPException(status_code=409, detail="A later year is already closed")
+    snap = await build_fiscal_snapshot(fiscal_year_start)
     payload = {"closed": True, "closed_at": now_iso(), "updated_at": now_iso()}
     meta = await sdb.fiscal_years.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
     if meta:
@@ -4171,12 +4196,14 @@ async def owner_close_fiscal_year(fiscal_year_start: int, user: dict = Depends(r
     else:
         await sdb.fiscal_years.insert_one({"id": new_id(), "fiscal_year_start": fiscal_year_start,
                                            "created_at": now_iso(), **payload})
-    snap = await build_fiscal_snapshot(fiscal_year_start)
     old = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
     if old:
         await sdb.fiscal_snapshots.update_one({"fiscal_year_start": fiscal_year_start}, {"$set": snap})
     else:
         await sdb.fiscal_snapshots.insert_one({"id": new_id(), **snap})
+    next_year = fiscal_year_start + 1
+    await sdb.fiscal_years.update_one({"fiscal_year_start": next_year},
+        {"$setOnInsert": {"id": new_id(), "fiscal_year_start": next_year, "closed": False, "created_at": now_iso(), "opening_stock": snap["closing_stock"]["total_value"], "opening_date": _next_day(snap["close_date"])}}, upsert=True)
     await audit(user, "close", "fiscal_year", f"Closed fiscal year {_period_label(fiscal_year_start)} with snapshot")
     return {"ok": True}
 
