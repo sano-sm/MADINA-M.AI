@@ -2133,12 +2133,15 @@ async def get_monthly_summary(fiscal_year_start: int, user: dict = Depends(requi
     annual_raw = {k: 0.0 for k in ["buying", "export_sales", "local_sales", "tt_received", "shipping_cost", "salary", "rent_expenses"]}
     start_month = _fiscal_start_month(company_id)
     previous_closing = 0.0
+    prior_snapshot = await sdb.fiscal_snapshots.find_one(
+        {"fiscal_year_start": fiscal_year_start - 1}, {"_id": 0, "closing_stock": 1})
+    carried_stock = (prior_snapshot or {}).get("closing_stock", {}).get("total_value")
     for calendar_year, month in pairs:
         raw = by_month.get(month)
         raw_for_calc = dict(raw or {})
         # The fiscal year's first month is entered manually. Every later month's
         # Opening Stock is linked to the previous month's Closing Stock.
-        opening_stock = float(raw_for_calc.get("opening_stock") or 0) if month == start_month else previous_closing
+        opening_stock = (float(carried_stock) if carried_stock is not None else float(raw_for_calc.get("opening_stock") or 0)) if month == start_month else previous_closing
         # An untouched future month carries stock forward unchanged. This keeps
         # YTD/annual figures correct before all 12 months have been entered.
         if raw is None:
@@ -2174,7 +2177,8 @@ async def get_monthly_summary(fiscal_year_start: int, user: dict = Depends(requi
         "start_month": _fiscal_start_month(company_id),
         "closed": bool(meta.get("closed", False)),
         "closed_at": meta.get("closed_at"),
-        "has_data": bool(rows or meta),
+        "has_data": bool(rows or meta or prior_snapshot),
+        "carried_opening_stock": carried_stock,
         "months": months,
         "annual": annual,
     }
@@ -2200,6 +2204,10 @@ async def update_monthly_summary(fiscal_year_start: int, month: int, body: Month
     # Later months derive it from the previous month's Closing Stock on read/calculation.
     if month != start_month:
         doc["opening_stock"] = 0.0
+    else:
+        prior_snapshot = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": fiscal_year_start - 1}, {"_id": 0, "closing_stock": 1})
+        if prior_snapshot:
+            doc["opening_stock"] = float(prior_snapshot.get("closing_stock", {}).get("total_value") or 0)
     existing = await sdb.monthly_summaries.find_one({"fiscal_year_start": fiscal_year_start, "month": month}, {"_id": 0})
     if existing:
         await sdb.monthly_summaries.update_one(
@@ -4188,6 +4196,8 @@ async def owner_close_fiscal_year(fiscal_year_start: int, user: dict = Depends(r
     later = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": {"$gte": fiscal_year_start + 1}}, {"_id": 0})
     if later:
         raise HTTPException(status_code=409, detail="A later year is already closed")
+    if fiscal_year_start != _current_fiscal_year_start(current_company.get()) and fiscal_year_start != 2026:
+        raise HTTPException(status_code=409, detail="Only the current operating year can be closed")
     snap = await build_fiscal_snapshot(fiscal_year_start)
     payload = {"closed": True, "closed_at": now_iso(), "updated_at": now_iso()}
     meta = await sdb.fiscal_years.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
