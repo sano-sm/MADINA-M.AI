@@ -20,6 +20,7 @@ const TABS = [
 export default function ContainerTT() {
   const { t } = useI18n();
   const [tab, setTab] = useState("invoices");
+  const [folder, setFolder] = useState(null);
   const { theme } = useSettings();
   // Folder appearance follows the website theme; existing records and calculations stay unchanged.
   const folderDesign = theme === "black" ? "b" : (theme === "royal" || theme === "emerald") ? "c" : "a";
@@ -29,7 +30,7 @@ export default function ContainerTT() {
       <PageHeader title={t("container_tt")} />
       <div className="mb-5 flex flex-wrap gap-2">
         {TABS.map((x) => (
-          <button key={x.key} data-testid={`ct-tab-${x.key}`} onClick={() => setTab(x.key)}
+          <button key={x.key} data-testid={`ct-tab-${x.key}`} onClick={() => { setTab(x.key); setFolder(null); }}
             className={`inline-flex items-center gap-2 rounded-sm border px-4 py-2 text-sm font-semibold transition-colors ${tab === x.key ? "gold-gradient border-transparent text-black" : "border-border bg-[var(--surface-2)] text-white hover:border-[var(--gold)]"}`}>
             <x.icon size={16} />{t(x.label)}
           </button>
@@ -47,7 +48,7 @@ export default function ContainerTT() {
             { key: "income", label: "TT Invoices", caption: folderDesign === "b" ? "TT Invoice List" : "All TT Receipts", icon: FileCheck2 },
             { key: "bl", label: "BL Amount", caption: folderDesign === "b" ? "BL Invoice List" : "All BL Records", icon: Ship },
           ].map((item) => (
-            <button type="button" key={item.key} onClick={() => setTab(item.key)}
+            <button type="button" key={item.key} onClick={() => { setTab(item.key); setFolder(item.key); }}
               data-testid={`ct-folder-${item.key}`}
               aria-pressed={tab === item.key}
               className={`ct-design-card ct-design-card--${folderDesign} ${tab === item.key ? "ct-design-card--active" : ""}`}>
@@ -67,17 +68,76 @@ export default function ContainerTT() {
           ))}
         </div>
       </section>
-      {tab === "invoices" && <InvoicesSection />}
-      {tab === "income" && <IncomeSection />}
-      {tab === "bl" && <BLAmountSection />}
+      {folder && (
+        <div className="mb-4 flex items-center gap-3">
+          <button type="button" onClick={() => setFolder(null)} className="rounded-md border border-[var(--gold)] px-4 py-2 font-semibold text-[var(--gold)] hover:bg-white/10">
+            ← Back to {tab === "invoices" ? "Container Invoice" : tab === "income" ? "Income TT" : "BL Amount"}
+          </button>
+          <span className="font-semibold gold-text">{folder === "invoices" ? "Container Invoice Folder" : folder === "income" ? "TT PDF Folder" : "BL PDF Folder"}</span>
+        </div>
+      )}
+      {folder === "income" && <DocumentArchiveFolder kind="tt" />}
+      {folder === "bl" && <DocumentArchiveFolder kind="bl" />}
+      {tab === "invoices" && <InvoicesSection folderOpen={folder === "invoices"} onOpenFolder={() => setFolder("invoices")} />}
+      {tab === "income" && !folder && <IncomeSection />}
+      {tab === "bl" && !folder && <BLAmountSection />}
       {tab === "monthly" && <MonthlySummarySection />}
       {tab === "summary" && <SummarySection />}
     </div>
   );
 }
 
+/* TT and BL document folders show PDF copies; operational tables remain on their original tabs. */
+function DocumentArchiveFolder({ kind }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    api.get(`/ct-document-archives/${kind}`)
+      .then(({ data }) => { if (active) setItems(data); })
+      .catch((e) => { if (active) toast.error(apiError(e)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [kind]);
+  const openPdf = async (item) => {
+    setBusy(item.source_id);
+    try {
+      const { data } = await api.get(`/ct-document-archives/${kind}/${encodeURIComponent(item.source_id)}/pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${kind.toUpperCase()}-${item.number || item.source_id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { toast.error(apiError(e)); }
+    finally { setBusy(null); }
+  };
+  return <div className="card-surface rounded-lg p-4" data-testid={`ct-archive-${kind}`}>
+    <h3 className="mb-3 text-lg font-bold gold-text">{kind === "tt" ? "TT Invoice PDF Receipts" : "BL Amount PDF Records"}</h3>
+    {loading ? <div className="text-sm text-muted-foreground">Loading documents...</div> :
+      !items.length ? <Empty text="No saved documents yet" /> :
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => <button type="button" key={item.source_id} disabled={busy === item.source_id}
+          onClick={() => openPdf(item)}
+          className="flex items-center gap-3 rounded-lg border border-[var(--gold)]/50 bg-[var(--surface-2)] p-3 text-left hover:border-[var(--gold)]">
+          <FileText className="shrink-0 text-[var(--gold)]" size={32}/>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold text-white">{kind.toUpperCase()} #{item.number}</span>
+            <span className="block truncate text-xs text-muted-foreground">{item.data?.invoice_number || item.data?.container_no || "—"}</span>
+            <span className="block text-xs text-muted-foreground">{item.data?.date || ""}</span>
+          </span>
+          <span className="text-xs text-[var(--gold)]">{busy === item.source_id ? "..." : "PDF ↓"}</span>
+        </button>)}
+      </div>}
+  </div>;
+}
+
 /* ------------------------- Container Invoices ------------------------- */
-function InvoicesSection() {
+function InvoicesSection({ folderOpen, onOpenFolder }) {
   const { t } = useI18n();
   const { can } = useAuth();
   const editable = can("finance.edit");
@@ -102,6 +162,7 @@ function InvoicesSection() {
     try {
       const { data } = await api.post("/container-invoices", { company_name: "", page_count: 1, items: [] });
       await load();
+      onOpenFolder();
       openInvoice(data.id);
       toast.success(t("save"));
     } catch (e) { toast.error(apiError(e)); }
@@ -119,12 +180,12 @@ function InvoicesSection() {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {editable && <Btn data-testid="new-container-invoice-btn" onClick={createNew}><Plus size={16} />{t("new_container_invoice")}</Btn>}
-        <Input data-testid="ci-search" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder={t("search_container")} className="max-w-xs" />
+        {folderOpen && <Input data-testid="ci-search" value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder={t("search_container")} className="max-w-xs" />}
       </div>
 
-      {/* Compact invoice tabs/cards */}
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
+      {/* Original container invoice list lives only inside the Container Invoices folder. */}
+      {folderOpen && <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
         {filtered.map((i) => (
           <button key={i.id} data-testid={`ci-card-${i.id}`} onClick={() => openInvoice(i.id)}
             className={`shrink-0 rounded-sm border px-3 py-2 text-start text-xs transition-colors ${selId === i.id ? "border-[var(--gold)] bg-[var(--gold)]/10" : "border-border bg-[var(--surface-2)] hover:border-[var(--gold)]/50"}`}>
@@ -136,12 +197,12 @@ function InvoicesSection() {
         {!filtered.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
       </div>
 
-      {detail ? (
+      {folderOpen && detail ? (
         <InvoiceSheet key={detail.id} detail={detail} editable={editable}
           onSaved={() => load()} onDeleted={() => { setDetail(null); setSelId(null); load(); }} />
-      ) : (
+      ) : folderOpen ? (
         <div className="card-surface rounded-sm"><Empty text={t("no_invoice_selected")} /></div>
-      )}
+      ) : null}
     </div>
   );
 }
