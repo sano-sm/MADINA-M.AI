@@ -72,7 +72,7 @@ export default function OwnerTools() {
   return <div>
     <PageHeader title={t("owner_tools")} />
 
-    {!openFolder && <div className="mb-5 grid max-w-[310px] grid-cols-2 justify-items-center gap-x-5 gap-y-5">
+    {!openFolder && <div className="mb-5 grid w-full max-w-[460px] grid-cols-2 justify-items-center gap-x-8 gap-y-8 px-1 sm:gap-x-12">
       <OwnerDesktopFolder title="Special Years" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
       <OwnerDesktopFolder title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
       <OwnerDesktopFolder title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} small />
@@ -145,6 +145,6 @@ function OwnerDesktopFolder({ title, detail, onClick, small=false }) {
       <span className="absolute left-[15%] top-[53%] h-[2px] w-[45%] bg-slate-200" />
     </span>
     <span aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[32px] rounded-b-[9px] rounded-t-[5px] border border-[#d8b875] bg-gradient-to-b from-[#c5a45c] via-[#a58243] to-[#75552b] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_10px_rgba(0,0,0,0.18)]" />
-    <span className={`absolute inset-x-1 bottom-[13px] flex items-center justify-center font-head font-bold leading-tight text-[#241b11] ${small ? "text-[10px]" : "text-[11px]"}`}>{title}</span>
+    <span className={`absolute inset-x-1 bottom-[13px] flex items-center justify-center font-head font-bold leading-tight text-[#241b11] ${small ? "text-[11px]" : "text-[14px]"}`}>{title}</span>
   </button>;
 }
