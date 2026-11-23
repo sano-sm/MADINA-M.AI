@@ -5,6 +5,7 @@ import { Btn, Field, Input, Modal } from "@/components/kit";
 import { previewBlob, printWindow } from "@/lib/documentPreview";
 import { toast } from "sonner";
 import { FileText, FilePenLine, Plus, Trash2, Check } from "lucide-react";
+import { AUTO_PART_NAMES } from "@/lib/autoPartsCatalog";
 
 const today = () => new Date().toLocaleDateString("sv-SE");
 const newRow = () => ({date:today(), name:"", chassis:"", gross:""});
@@ -174,7 +175,7 @@ function AutoPartsEditor({value,onChange,company,invoiceNumber,busy,onSave}) {
       <div className="w-full overflow-x-auto"><table className="w-full min-w-[540px] table-fixed border-collapse border border-slate-400/70 text-left" dir="ltr">
         <colgroup><col style={{width:"6%"}}/><col style={{width:"28%"}}/><col style={{width:"16%"}}/><col style={{width:"6%"}}/><col style={{width:"28%"}}/><col style={{width:"16%"}}/></colgroup>
         <thead><tr>{["No.","Engine / Chassis / Part Number","Price (JPY)","No.","Engine / Chassis / Part Number","Price (JPY)"].map((t,i)=><th key={i} className="border border-slate-400/70 bg-white/10 px-1 py-1 text-[9px] font-semibold text-white">{t}</th>)}</tr></thead>
-        <tbody>{Array.from({length:count},(_,i)=><tr key={i}>{[0,1].map(side=>{const idx=start+i+side*count;return <React.Fragment key={side}><td className="border border-slate-400/70 text-center text-[10px]">{idx+1}</td><td className="border border-slate-400/70"><input aria-label={title+" number "+(idx+1)} className={inputClass} value={rows[idx]?.number||""} maxLength={80} onChange={e=>setLine(type,idx,"number",e.target.value)}/></td><td className="border border-slate-400/70"><input aria-label={title+" price "+(idx+1)} type="number" min="0" step="1" className={inputClass} value={rows[idx]?.price??""} onChange={e=>setLine(type,idx,"price",e.target.value)}/></td></React.Fragment>})}</tr>)}</tbody>
+        <tbody>{Array.from({length:count},(_,i)=><tr key={i}>{[0,1].map(side=>{const idx=start+i+side*count;return <React.Fragment key={side}><td className="border border-slate-400/70 text-center text-[10px]">{idx+1}</td><td className="border border-slate-400/70">{type==="parts" ? <SparePartNameInput ariaLabel={"Parts name "+(idx+1)} value={rows[idx]?.number||""} onChange={v=>setLine(type,idx,"number",v)} className={inputClass}/> : <input aria-label={title+" number "+(idx+1)} className={inputClass} value={rows[idx]?.number||""} maxLength={80} onChange={e=>setLine(type,idx,"number",e.target.value)}/>}</td><td className="border border-slate-400/70"><input aria-label={title+" price "+(idx+1)} type="number" min="0" step="1" className={inputClass} value={rows[idx]?.price??""} onChange={e=>setLine(type,idx,"price",e.target.value)}/></td></React.Fragment>})}</tr>)}</tbody>
       </table></div>
     </div>;
   }
@@ -190,5 +191,31 @@ function AutoPartsEditor({value,onChange,company,invoiceNumber,busy,onSave}) {
     {list("CHASSIS LIST","chassis",0,6)}
     {list("PARTS LIST","parts",0,20)}
     <button type="button" disabled={busy} onClick={onSave} className="gold-gradient mt-5 rounded px-4 py-2 font-semibold text-black disabled:opacity-50">{busy?"Saving...":"Confirm & Save PDF"}</button>
+  </div>;
+}
+
+function SparePartNameInput({value,onChange,className,ariaLabel}) {
+  const [focused,setFocused]=useState(false);
+  const [active,setActive]=useState(0);
+  const query=value.trim().toLowerCase();
+  const matches=query ? AUTO_PART_NAMES.filter(name=>name.toLowerCase().startsWith(query)).slice(0,12) : [];
+  const show=focused && matches.length>0 && !matches.some(name=>name.toLowerCase()===query);
+  const choose=(name)=>{onChange(name);setFocused(false);setActive(0);};
+  return <div className="relative min-w-0">
+    <input aria-label={ariaLabel} aria-autocomplete="list" autoComplete="off" className={className} value={value} maxLength={80}
+      placeholder="Type part name" onFocus={()=>{setFocused(true);setActive(0);}}
+      onBlur={()=>setFocused(false)} onChange={e=>{onChange(e.target.value);setActive(0);}}
+      onKeyDown={e=>{
+        if(!show)return;
+        if(e.key==="ArrowDown"){e.preventDefault();setActive(i=>(i+1)%matches.length);}
+        else if(e.key==="ArrowUp"){e.preventDefault();setActive(i=>(i+matches.length-1)%matches.length);}
+        else if(e.key==="Enter"){e.preventDefault();choose(matches[active]);}
+        else if(e.key==="Escape"){setFocused(false);}
+      }}/>
+    {show && <div role="listbox" aria-label="Spare part suggestions" className="absolute left-0 top-full z-50 max-h-44 min-w-[180px] w-max max-w-[min(85vw,300px)] overflow-y-auto rounded-md border border-[var(--gold)]/60 bg-[#172b25] p-1 shadow-xl">
+      {matches.map((name,i)=><button key={name} type="button" role="option" aria-selected={i===active}
+        onMouseDown={e=>e.preventDefault()} onClick={()=>choose(name)}
+        className={`block w-full rounded px-2 py-2 text-left text-xs text-white ${i===active?"bg-[var(--gold)]/25":"hover:bg-white/10"}`}>{name}</button>)}
+    </div>}
   </div>;
 }
