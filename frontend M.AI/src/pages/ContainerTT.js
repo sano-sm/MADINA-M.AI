@@ -93,6 +93,7 @@ function DocumentArchiveFolder({ kind }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null);
+  const [query, setQuery] = useState("");
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -117,21 +118,28 @@ function DocumentArchiveFolder({ kind }) {
     } catch (e) { toast.error(apiError(e)); }
     finally { setBusy(null); }
   };
-  return <div className="card-surface rounded-lg p-4" data-testid={`ct-archive-${kind}`}>
-    <h3 className="mb-3 text-lg font-bold gold-text">{kind === "tt" ? "TT Invoice PDF Receipts" : "BL Amount PDF Records"}</h3>
+  const visible = items.filter((item) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return [item.number, item.data?.invoice_number, item.data?.container_no, item.data?.company_name, item.data?.date]
+      .some((value) => String(value ?? "").toLowerCase().includes(q));
+  });
+  return <div className="ct-saved-panel" data-testid={`ct-archive-${kind}`}>
+    <h3 className="ct-saved-heading">{kind === "tt" ? "Saved TT Invoices" : "Saved BL Amount Invoices"}</h3>
+    <input aria-label="Search saved PDF documents" className="ct-saved-search" value={query}
+      onChange={(e) => setQuery(e.target.value)} placeholder="Invoice number, company, container..." />
+    <p className="ct-saved-hint">Tap a document to download PDF</p>
     {loading ? <div className="text-sm text-muted-foreground">Loading documents...</div> :
-      !items.length ? <Empty text="No saved documents yet" /> :
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => <button type="button" key={item.source_id} disabled={busy === item.source_id}
-          onClick={() => openPdf(item)}
-          className="flex items-center gap-3 rounded-lg border border-[var(--gold)]/50 bg-[var(--surface-2)] p-3 text-left hover:border-[var(--gold)]">
-          <FileText className="shrink-0 text-[var(--gold)]" size={32}/>
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold text-white">{kind.toUpperCase()} #{item.number}</span>
-            <span className="block truncate text-xs text-muted-foreground">{item.data?.invoice_number || item.data?.container_no || "—"}</span>
-            <span className="block text-xs text-muted-foreground">{item.data?.date || ""}</span>
-          </span>
-          <span className="text-xs text-[var(--gold)]">{busy === item.source_id ? "..." : "PDF ↓"}</span>
+      !visible.length ? <Empty text={items.length ? "No matching documents" : "No saved documents yet"} /> :
+      <div className="ct-saved-grid">
+        {visible.map((item) => <button type="button" key={item.source_id} disabled={busy === item.source_id}
+          onClick={() => openPdf(item)} className="ct-saved-paper"
+          title={`${kind.toUpperCase()} ${item.number} — ${item.data?.invoice_number || ""}`}>
+          <FileText className="ct-saved-paper-icon" aria-hidden="true" />
+          <span className="ct-saved-paper-label">INVOICE NO.</span>
+          <span className="ct-saved-paper-number">{item.data?.invoice_number || `${kind.toUpperCase()}-${item.number}`}</span>
+          <span className="ct-saved-paper-date">{item.data?.date || "—"}</span>
+          <span className="ct-saved-paper-footer">{busy === item.source_id ? "OPENING..." : "PDF"}</span>
         </button>)}
       </div>}
   </div>;
@@ -185,17 +193,23 @@ function InvoicesSection({ mode }) {
           placeholder={t("search_container")} className="max-w-xs" />}
       </div>
 
-      {/* Original container invoice list lives only inside the Container Invoices folder. */}
-      {folderOpen && <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
-        {filtered.map((i) => (
-          <button key={i.id} data-testid={`ci-card-${i.id}`} onClick={() => openInvoice(i.id)}
-            className={`shrink-0 rounded-sm border px-3 py-2 text-start text-xs transition-colors ${selId === i.id ? "border-[var(--gold)] bg-[var(--gold)]/10" : "border-border bg-[var(--surface-2)] hover:border-[var(--gold)]/50"}`}>
-            <div className="font-mono font-semibold text-[var(--gold)]">{i.invoice_number || "—"}</div>
-            <div className="max-w-[140px] truncate text-white">{i.company_name || t("company_name")}</div>
-            <div className="text-muted-foreground">{i.container_no || "—"}</div>
-          </button>
-        ))}
-        {!filtered.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
+      {/* Original editable invoices are listed only inside this folder. */}
+      {folderOpen && <div className="ct-saved-panel mb-5" data-testid="ct-container-invoice-archive">
+        <h3 className="ct-saved-heading">Saved Container Invoices</h3>
+        <p className="ct-saved-hint">Tap a document to open the original invoice</p>
+        <div className="ct-saved-grid">
+          {filtered.map((i) => (
+            <button key={i.id} data-testid={`ci-card-${i.id}`} onClick={() => openInvoice(i.id)}
+              className={`ct-saved-paper ${selId === i.id ? "ct-saved-paper--selected" : ""}`}>
+              <FileText className="ct-saved-paper-icon" aria-hidden="true" />
+              <span className="ct-saved-paper-label">INVOICE NO.</span>
+              <span className="ct-saved-paper-number">{i.invoice_number || "—"}</span>
+              <span className="ct-saved-paper-date">{i.loading_date || i.created_at?.slice(0, 10) || "—"}</span>
+              <span className="ct-saved-paper-footer">INVOICE</span>
+            </button>
+          ))}
+        </div>
+        {!filtered.length && <div className="mt-3 text-sm text-muted-foreground">{t("no_data")}</div>}
       </div>}
 
       {detail ? (
