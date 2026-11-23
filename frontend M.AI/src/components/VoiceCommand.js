@@ -290,21 +290,47 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
     setReply("یہ کمانڈ ابھی دستیاب نہیں؛ کوئی ریکارڈ تبدیل نہیں کیا گیا۔");
   };
 
-  const start = (isRestart = false) => {
+  const start = async (isRestart = false) => {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
       setError(language === "en" ? "Voice recognition is not supported here. Type your search below, or try Chrome on Android/desktop." : "اس براوزر میں وائس ریکگنیشن دستیاب نہیں۔ نیچے تلاش لکھیں، یا Chrome Android/desktop پر آزمائیں۔");
       setStatus("unsupported");
       return;
     }
-    keepListening.current = true;
     const currentSession = isRestart ? session.current : ++session.current;
+    keepListening.current = true;
     setError("");
     setStatus("starting");
+    if (!isRestart) {
+      if (!window.isSecureContext) {
+        keepListening.current = false;
+        setStatus("error");
+        setError("Microphone requires HTTPS. ویب سائٹ HTTPS پر کھولیں۔");
+        return;
+      }
+      // Request microphone access only after the user's tap. Never bypass a denial.
+      if (navigator.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+        } catch (permissionError) {
+          if (currentSession !== session.current) return;
+          keepListening.current = false;
+          setStatus("error");
+          const denied = permissionError?.name === "NotAllowedError" || permissionError?.name === "PermissionDeniedError";
+          setError(denied
+            ? "Microphone permission blocked. iPhone: Settings → Apps → Safari → Microphone → Allow (or Safari website settings → Microphone → Allow). پھر صفحہ دوبارہ کھولیں۔"
+            : "Microphone unavailable: " + (permissionError?.message || "Check device microphone and browser settings."));
+          return;
+        }
+      }
+    }
+    if (currentSession !== session.current || !keepListening.current) return;
     const r = new Recognition();
     recognition.current = r;
     r.lang = speechLanguage;
-    r.continuous = true;
+    // iOS Safari may end each utterance; restart only after a successful session.
+    r.continuous = !/iPad|iPhone|iPod/.test(navigator.userAgent);
     r.interimResults = true;
     r.maxAlternatives = 1;
     r.onstart = () => { if (currentSession !== session.current) { try { r.abort(); } catch (_) {} return; } setActive(true); setStatus("listening"); };
@@ -325,7 +351,10 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       if (currentSession !== session.current) return;
       if (event.error === "no-speech" && keepListening.current) return;
       const messages = {
-        "not-allowed": language === "en" ? "Microphone permission was denied. Allow microphone access and try again." : "مائیکروفون کی اجازت نہیں ملی۔ اجازت دے کر دوبارہ کوشش کریں۔",
+        "not-allowed": "Microphone / Speech Recognition not allowed. iPhone: Safari website settings → Microphone → Allow. Settings → Privacy & Security → Microphone بھی چیک کریں۔ اگر اجازت پہلے سے ہے تو براؤزر Speech Recognition روک رہا ہو سکتا ہے؛ نیچے لکھ کر کمانڈ دیں۔",
+        "service-not-allowed": "Speech Recognition service blocked by browser. مائیکروفون اجازت ہونے کے باوجود آواز کی سروس بند ہو سکتی ہے؛ لکھ کر کمانڈ دیں یا دوسرے supported browser میں آزمائیں۔",
+        "network": "Speech Recognition network unavailable. انٹرنیٹ چیک کریں یا لکھ کر کمانڈ دیں۔",
+        "language-not-supported": "یہ Speech Recognition زبان اس براؤزر میں دستیاب نہیں۔ دوسری زبان منتخب کریں یا لکھ کر کمانڈ دیں۔",
         "audio-capture": language === "en" ? "No microphone was found on this device." : "اس ڈیوائس پر مائیکروفون نہیں ملا۔",
       };
       setError(messages[event.error] || `${language === "en" ? "Microphone" : "مائیکروفون"}: ${event.error}`);
@@ -337,7 +366,7 @@ export default function VoiceCommand({ kind, navigate, onClose }) {
       if (currentSession !== session.current) return;
       recognition.current = null;
       if (keepListening.current) {
-        restartTimer.current = window.setTimeout(() => { if (currentSession === session.current && keepListening.current) start(true); }, 350);
+        restartTimer.current = window.setTimeout(() => { if (currentSession === session.current && keepListening.current) start(true); }, 700);
       } else {
         setActive(false);
         setStatus("idle");
