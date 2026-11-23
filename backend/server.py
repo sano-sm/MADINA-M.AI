@@ -4132,6 +4132,7 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
     return {
         "company": current_company.get(), "fiscal_year_start": fiscal_year_start,
         "label": _period_label(fiscal_year_start), "snapshot_at": now_iso(),
+        "profit_summary": await compute_pnl(),
         "funds": await funds_summary(), "customers": customers,
         "brokers": brokers, "loans": loans, "active_vehicles": active_vehicles,
     }
@@ -4145,7 +4146,9 @@ async def owner_fiscal_years(user: dict = Depends(require("settings.manage"))):
     # Always make the current year and recent previous years selectable, without
     # touching the manual Container & TT / monthly-summary close state.
     years = set(meta.keys())
-    years.update(range(current - 5, current + 1))
+    # Show the operating 2026 year and any years explicitly recorded in metadata.
+    # Do not fabricate empty historical years in the owner folder.
+    years.add(2026)
     snaps = {int(x["fiscal_year_start"]): x for x in await sdb.fiscal_snapshots.find({}, {"_id": 0, "fiscal_year_start": 1, "snapshot_at": 1}).to_list(200)}
     return {"years": [{"fiscal_year_start": y, "label": _period_label(y),
                          "closed": bool(meta.get(y, {}).get("closed")),
