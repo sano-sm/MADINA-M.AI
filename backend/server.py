@@ -5130,6 +5130,46 @@ async def vehicle_catalog_search(q: str = "", user: dict = Depends(get_current_u
     matches.sort(key=lambda x: (x[0], x[1], x[2].get("make", ""), x[2].get("vehicle_name", "")))
     return [m[2] for m in matches[:30]]
 
+
+# Optional server-side speech-to-text fallback for iOS browsers that block Web Speech.
+# No audio is persisted; never expose the provider API key to the frontend.
+@api.post("/assistant/transcribe")
+async def assistant_transcribe(request: Request, user: dict = Depends(get_current_user)):
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key:
+        raise HTTPException(status_code=503, detail="Speech transcription is not configured on the server (OPENAI_API_KEY).")
+    content_type = request.headers.get("content-type", "").split(";")[0].lower()
+    mime_extensions = {
+        "audio/webm": "webm", "audio/mp4": "m4a", "audio/mpeg": "mp3",
+        "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg",
+        "audio/aac": "aac",
+    }
+    if content_type not in mime_extensions:
+        raise HTTPException(status_code=415, detail="Unsupported audio format.")
+    if request.headers.get("content-length", "").isdigit() and int(request.headers["content-length"]) > 10_000_000:
+        raise HTTPException(status_code=413, detail="Audio recording exceeds 10 MB.")
+    audio = await request.body()
+    if not audio or len(audio) > 10_000_000:
+        raise HTTPException(status_code=413, detail="Audio recording must be between 1 byte and 10 MB.")
+    language = request.query_params.get("language", "ur")
+    if language not in ("ur", "en"):
+        raise HTTPException(status_code=400, detail="Unsupported transcription language.")
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {key}"},
+                data={"model": "whisper-1", "language": language, "response_format": "json"},
+                files={"file": (f"voice.{mime_extensions[content_type]}", audio, content_type)},
+            )
+        if response.status_code != 200:
+            logging.warning("Speech transcription provider returned HTTP %s", response.status_code)
+            raise HTTPException(status_code=502, detail="Speech transcription provider unavailable. Try again.")
+        text_value = str(response.json().get("text", "")).strip()
+        return {"text": text_value[:12000]}
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Speech transcription connection failed.")
+
 app.include_router(api)
 
 
