@@ -5,7 +5,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Archive, ChevronLeft, Download, Eye, FolderOpen, LockKeyhole, UnlockKeyhole, CalendarDays, BarChart3, Info, FileText, Package, TrendingUp, Settings2, Printer, CheckCircle2 } from "lucide-react";
+import { Archive, ChevronLeft, Download, Eye, FolderOpen, LockKeyhole, UnlockKeyhole, CalendarDays, BarChart3, Info, FileText, Package, TrendingUp, Settings2, Printer, CheckCircle2, FolderArchive, FilePenLine, DatabaseBackup } from "lucide-react";
 
 export default function OwnerTools() {
   const { t } = useI18n();
@@ -80,10 +80,10 @@ export default function OwnerTools() {
   return <div>
     <PageHeader title="OWNER TOOLS" />
 
-    {!openFolder && <div className="mb-5 grid w-full max-w-[460px] grid-cols-2 justify-items-center gap-x-8 gap-y-8 px-1 sm:gap-x-12">
-      <OwnerDesktopFolder title="Year Archives" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
-      <OwnerDesktopFolder title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
-      <OwnerDesktopFolder title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} small />
+    {!openFolder && <div className="mb-6 grid w-full max-w-3xl grid-cols-3 gap-2 sm:gap-4">
+      <OwnerDesktopFolder icon={FolderArchive} title="YEAR ARCHIVES" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
+      <OwnerDesktopFolder icon={FilePenLine} title="INVOICES" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
+      <OwnerDesktopFolder icon={DatabaseBackup} title="FULL BACKUP ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} small />
     </div>}
 
     {openFolder === "years" && <section className="mb-5 rounded-xl border border-[#3a5066] bg-[#06111f] p-3 text-white shadow-xl sm:p-5">
@@ -205,12 +205,14 @@ export default function OwnerTools() {
 
 function Snap({ label, value }) { return <div className="rounded-sm bg-white/5 p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-bold gold-text">{value}</div></div>; }
 function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold text-white">{title}</h3><div className="max-h-56 space-y-1 overflow-auto text-xs text-muted-foreground">{rows.length ? rows.map((x, i) => <div key={i} className="border-b border-border py-1">{x}</div>) : <div>—</div>}</div></div>; }
-function OwnerDesktopFolder({ title, detail, onClick, small=false }) {
+function OwnerDesktopFolder({ title, detail, onClick, icon: Icon }) {
   return <button type="button" onClick={onClick} aria-label={title} title={detail}
-    className={`group relative flex h-[102px] w-[148px] flex-col items-center justify-center overflow-hidden rounded-[20px] border border-[#e6c477] bg-gradient-to-br from-[#f1d78f] via-[#b78b43] to-[#765024] px-3 text-center shadow-[0_5px_0_#4a331b,0_10px_24px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-1 hover:border-[#ffe6a5] hover:shadow-[0_7px_0_#4a331b,0_14px_28px_rgba(0,0,0,0.4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e9bd5e] active:translate-y-0 sm:h-[112px] sm:w-[166px] ${small ? "opacity-100" : ""}`}>
-    <span aria-hidden="true" className="pointer-events-none absolute inset-[4px] rounded-[16px] border border-white/35" />
-    <span aria-hidden="true" className="pointer-events-none absolute -left-10 -top-16 h-32 w-28 rotate-45 bg-white/20 blur-xl" />
-    <span className="relative z-10 font-head text-[15px] font-extrabold leading-snug tracking-wide text-[#21180c] drop-shadow-[0_1px_0_rgba(255,255,255,0.4)] sm:text-[17px]">{title}</span>
-    <span aria-hidden="true" className="relative z-10 mt-2 h-[2px] w-10 rounded-full bg-[#493016]/60" />
+    className="group relative flex min-h-[148px] w-full flex-col items-center justify-center overflow-hidden rounded-[19px] border border-[#d5aa4e] bg-gradient-to-b from-[#211d18] via-[#101114] to-[#090a0d] px-1.5 py-4 text-center shadow-[0_5px_15px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,224,141,0.2)] transition-all duration-200 hover:-translate-y-1 hover:border-[#ffe2a0] hover:shadow-[0_7px_22px_rgba(205,156,56,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd978] sm:min-h-[185px] sm:rounded-[23px] sm:px-3">
+    <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-[#ffdc74] to-transparent shadow-[0_0_12px_#e8af39]" />
+    <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-1/4 h-6 w-1/2 rounded-full bg-[#d9a22d]/15 blur-lg" />
+    <span className="relative mb-3 flex h-[65px] w-[65px] items-center justify-center rounded-full border border-[#d8ae56] bg-gradient-to-br from-[#3d2e15] via-[#141313] to-[#0a0b0e] shadow-[inset_0_1px_5px_rgba(246,200,98,0.3),0_0_12px_rgba(216,164,50,0.15)] sm:h-[88px] sm:w-[88px]">
+      <Icon className="h-9 w-9 text-[#f1c45d] drop-shadow-[0_0_5px_rgba(246,193,68,0.45)] sm:h-12 sm:w-12" strokeWidth={1.65} />
+    </span>
+    <span className="relative z-10 font-head text-[10px] font-extrabold leading-tight tracking-[0.02em] text-[#f7d996] sm:text-[15px]">{title}</span>
   </button>;
 }
