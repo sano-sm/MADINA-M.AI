@@ -67,9 +67,9 @@ export default function PinLock() {
         <Languages size={16} /> {lang === "en" ? "اردو" : "English"}
       </button>
 
-      <div className="relative z-10 flex w-full max-w-xs flex-col items-center rounded-3xl px-4 py-7 backdrop-blur-[3px]" style={{background:pinTheme === "floral" ? "rgba(255,255,255,.68)" : "rgba(0,8,19,.35)",boxShadow:`0 0 55px ${accent}18`}}>
-        <img src="/logo.png" alt="MTC" className="mb-3 h-20 w-20 rounded-sm object-cover" />
-        <h1 className="font-head text-xl font-black gold-text">{t("enter_pin")}</h1>
+      <div className="relative z-10 flex w-full max-w-xs sm:max-w-sm lg:max-w-md flex-col items-center rounded-3xl px-4 py-7 sm:px-8 lg:px-12 lg:py-10 backdrop-blur-[3px]" style={{background:pinTheme === "floral" ? "rgba(255,255,255,.68)" : "rgba(0,8,19,.35)",boxShadow:`0 0 55px ${accent}18`}}>
+        <img src="/logo.png" alt="MTC" className="mb-3 h-20 w-20 lg:h-24 lg:w-24 rounded-sm object-cover" />
+        <h1 className="font-head text-xl lg:text-3xl font-black gold-text">{t("enter_pin")}</h1>
         <p className="mt-1 mb-6 text-center text-sm" style={{color:ink,opacity:.78}}>{t("pin_subtitle")}</p>
 
         {/* dots */}
@@ -81,16 +81,16 @@ export default function PinLock() {
         <div className="mb-4 h-5 text-sm text-red-400" data-testid="pin-error">{busy ? <Loader2 className="animate-spin" size={16} /> : err}</div>
 
         {/* keypad */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 lg:gap-5">
           {keys.map((k) => (
             <button key={k} data-testid={`pin-key-${k}`} onClick={() => push(k)} disabled={busy}
-              className="flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl font-bold shadow-lg transition-transform active:scale-95" style={{borderColor:accent,color:ink,background:pinTheme === "floral" ? "#fff" : "#071927c9",boxShadow:`0 0 12px ${accent}40`}}>
+              className="flex h-16 w-16 lg:h-20 lg:w-20 items-center justify-center rounded-full border-2 text-2xl font-bold shadow-lg transition-transform active:scale-95" style={{borderColor:accent,color:ink,background:pinTheme === "floral" ? "#fff" : "#071927c9",boxShadow:`0 0 12px ${accent}40`}}>
               {k}
             </button>
           ))}
           <span />
           <button data-testid="pin-key-0" onClick={() => push("0")} disabled={busy}
-            className="flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl font-bold shadow-lg transition-transform active:scale-95" style={{borderColor:accent,color:ink,background:pinTheme === "floral" ? "#fff" : "#071927c9",boxShadow:`0 0 12px ${accent}40`}}>
+            className="flex h-16 w-16 lg:h-20 lg:w-20 items-center justify-center rounded-full border-2 text-2xl font-bold shadow-lg transition-transform active:scale-95" style={{borderColor:accent,color:ink,background:pinTheme === "floral" ? "#fff" : "#071927c9",boxShadow:`0 0 12px ${accent}40`}}>
             0
           </button>
           <button data-testid="pin-backspace" onClick={back} disabled={busy}
