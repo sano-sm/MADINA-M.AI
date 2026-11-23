@@ -51,7 +51,7 @@ PER_COMPANY_COLLECTIONS = {
     "invoices", "payments", "expenses", "employees", "salaries",
     "scrap_allocations", "shokubai_allocations", "small_sales", "audit_logs",
     "brokers", "broker_vehicles", "broker_payments", "loans", "loan_entries",
-    "container_invoices", "income_tt", "bl_amounts",
+    "container_invoices", "income_tt", "bl_amounts", "ct_document_archives", "ct_archive_counters",
     "monthly_summaries", "monthly_summary_years",
     "issued_documents", "fund_entries", "fiscal_years", "fiscal_snapshots", "customer_shipping", "vehicle_photos", "payment_revisions", "ai_agents",
 }
@@ -1924,6 +1924,129 @@ def _tt_status(cnr, cumulative):
     return due, over, status
 
 
+
+# Document-folder archive is a snapshot only; it never feeds financial totals.
+async def _archive_ct_document(kind: str, source: dict):
+    source_id = source.get("id")
+    if not source_id:
+        return
+    data = {k: v for k, v in source.items() if k not in ("_id", "company_id")}
+    if kind == "tt":
+        inv = await sdb.container_invoices.find_one({"invoice_number": data.get("invoice_number")}, {"_id": 0})
+        data["company_name"] = (inv or {}).get("company_name", "")
+        data["container_no"] = (inv or {}).get("container_no", "")
+        data["invoice_total"] = _ci_total(inv)
+        tt_rows = await sdb.income_tt.find({"invoice_number": data.get("invoice_number")}, {"_id": 0}).to_list(5000)
+        data["cumulative_received"] = round(sum(float(x.get("income_tt_amount") or 0) for x in tt_rows), 2)
+        data["remaining"] = round(data["invoice_total"] - data["cumulative_received"], 2)
+    elif kind == "bl":
+        data["remaining"] = round(float(data.get("bl_amount") or 0) - float(data.get("paid_amount") or 0), 2)
+    existing = await sdb.ct_document_archives.find_one({"kind": kind, "source_id": source_id}, {"_id": 0})
+    if existing:
+        await sdb.ct_document_archives.update_one(
+            {"kind": kind, "source_id": source_id},
+            {"$set": {"data": data, "updated_at": now_iso()}})
+    else:
+        counter = await sdb.ct_archive_counters.find_one_and_update(
+            {"kind": kind}, {"$inc": {"seq": 1}}, upsert=True,
+            return_document=ReturnDocument.AFTER)
+        seq = counter["seq"]
+        await sdb.ct_document_archives.insert_one({
+            "id": new_id(), "kind": kind, "source_id": source_id,
+            "number": f"{seq:03d}", "data": data, "created_at": now_iso(),
+            "updated_at": now_iso(),
+        })
+
+
+@api.get("/ct-document-archives/{kind}")
+async def list_ct_document_archives(kind: str, user: dict = Depends(require("finance.view"))):
+    if kind not in ("tt", "bl"):
+        raise HTTPException(status_code=400, detail="Unknown archive")
+    # Existing records also appear, even if they predate the archive feature.
+    coll = sdb.income_tt if kind == "tt" else sdb.bl_amounts
+    originals = await coll.find({}, {"_id": 0}).to_list(5000)
+    archived = await sdb.ct_document_archives.find({"kind": kind}, {"_id": 0}).to_list(5000)
+    by_source = {a["source_id"]: a for a in archived}
+    result = []
+    for source in originals:
+        item = by_source.get(source["id"])
+        if item:
+            result.append(item)
+        else:
+            result.append({"id": source["id"], "source_id": source["id"],
+                           "kind": kind, "number": "Legacy",
+                           "data": source, "legacy": True})
+    # Keep archived PDFs even if a source record was subsequently removed.
+    result.extend(a for a in archived if not any(x.get("id") == a["source_id"] for x in originals))
+    return sorted(result, key=lambda a: a.get("created_at", a.get("data", {}).get("date", "")), reverse=True)
+
+
+@api.get("/ct-document-archives/{kind}/{source_id}/pdf")
+async def ct_document_archive_pdf(kind: str, source_id: str, user: dict = Depends(require("finance.view"))):
+    if kind not in ("tt", "bl"):
+        raise HTTPException(status_code=400, detail="Unknown archive")
+    archive = await sdb.ct_document_archives.find_one({"kind": kind, "source_id": source_id}, {"_id": 0})
+    if archive:
+        data = archive["data"]
+        number = archive["number"]
+    else:
+        coll = sdb.income_tt if kind == "tt" else sdb.bl_amounts
+        data = await coll.find_one({"id": source_id}, {"_id": 0})
+        if not data:
+            raise HTTPException(status_code=404, detail="Document not found")
+        number = "Legacy"
+        if kind == "tt":
+            inv = await sdb.container_invoices.find_one({"invoice_number": data.get("invoice_number")}, {"_id": 0})
+            data["company_name"] = (inv or {}).get("company_name", "")
+            data["container_no"] = (inv or {}).get("container_no", "")
+            data["invoice_total"] = _ci_total(inv)
+            entries = await sdb.income_tt.find({"invoice_number": data.get("invoice_number")}, {"_id": 0}).to_list(5000)
+            data["cumulative_received"] = round(sum(float(x.get("income_tt_amount") or 0) for x in entries), 2)
+            data["remaining"] = round(data["invoice_total"] - data["cumulative_received"], 2)
+    from xml.sax.saxutils import escape
+    fields = (
+        [("Date", "date"), ("Company", "company_name"), ("Container Number", "container_no"),
+         ("Invoice Number", "invoice_number"), ("Received TT Amount", "income_tt_amount"),
+         ("Container Invoice Total", "invoice_total"), ("Total TT Received", "cumulative_received"),
+         ("Remaining / Overpaid (+/-)", "remaining")]
+        if kind == "tt" else
+        [("Date", "date"), ("Company", "company_name"), ("Destination", "final_destination"),
+         ("Container Number", "container_no"), ("Invoice Number", "invoice_number"),
+         ("BL Amount", "bl_amount"), ("Paid Amount", "paid_amount"),
+         ("Remaining Balance", "remaining"), ("Paid Date", "paid_date"),
+         ("Surrender Date", "surrender_date")]
+    )
+    if kind == "bl" and "remaining" not in data:
+        data["remaining"] = round(float(data.get("bl_amount") or 0) - float(data.get("paid_amount") or 0), 2)
+    buf = io.BytesIO()
+    pdf = SimpleDocTemplate(buf, pagesize=A4, topMargin=22*mm, bottomMargin=22*mm)
+    styles = getSampleStyleSheet()
+    title = "TT Payment Receipt" if kind == "tt" else "BL Amount Record"
+    story = [Paragraph(escape(title), styles["Title"]),
+             Spacer(1, 8*mm), Paragraph("Document No: " + escape(str(number)), styles["Heading3"]),
+             Spacer(1, 6*mm)]
+    rows = [[Paragraph("<b>Field</b>", styles["Normal"]), Paragraph("<b>Value</b>", styles["Normal"])]]
+    for label, key in fields:
+        value = data.get(key, "")
+        if isinstance(value, (float, int)):
+            value = f"{value:,.2f}"
+        rows.append([Paragraph(escape(label), styles["Normal"]),
+                     Paragraph(escape(str(value if value is not None else "")), styles["Normal"])])
+    table = Table(rows, colWidths=[75*mm, 100*mm], repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e7edf6")),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#c7d0dd")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 9),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+    ]))
+    story.append(table)
+    pdf.build(story)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{kind}-{number}.pdf"'})
+
+
 @api.get("/container-invoices")
 async def list_container_invoices(user: dict = Depends(require("finance.view"))):
     rows = await sdb.container_invoices.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
@@ -2005,6 +2128,7 @@ async def create_income_tt(body: IncomeTTIn, user: dict = Depends(require("finan
     doc = body.model_dump()
     doc.update({"id": new_id(), "created_at": now_iso()})
     await sdb.income_tt.insert_one(doc)
+    await _archive_ct_document("tt", doc)
     await audit(user, "create", "income_tt", f"Income TT {body.income_tt_amount} for {body.invoice_number}")
     doc.pop("_id", None)
     return doc
@@ -2016,6 +2140,7 @@ async def update_income_tt(tid: str, body: IncomeTTIn, user: dict = Depends(requ
     if not r:
         raise HTTPException(status_code=404, detail="TT entry not found")
     await sdb.income_tt.update_one({"id": tid}, {"$set": body.model_dump()})
+    await _archive_ct_document("tt", {**r, **body.model_dump()})
     await audit(user, "update", "income_tt", f"Updated income TT {tid}")
     return {"ok": True}
 
@@ -2040,6 +2165,7 @@ async def create_bl_amount(body: BLAmountIn, user: dict = Depends(require("finan
     doc = body.model_dump()
     doc.update({"id": new_id(), "created_at": now_iso()})
     await sdb.bl_amounts.insert_one(doc)
+    await _archive_ct_document("bl", doc)
     await audit(user, "create", "bl_amount", f"BL Amount {body.bl_amount} for {body.invoice_number or body.container_no}")
     doc.pop("_id", None)
     return doc
@@ -2051,6 +2177,7 @@ async def update_bl_amount(bid: str, body: BLAmountIn, user: dict = Depends(requ
     if not existing:
         raise HTTPException(status_code=404, detail="BL Amount entry not found")
     await sdb.bl_amounts.update_one({"id": bid}, {"$set": body.model_dump()})
+    await _archive_ct_document("bl", {**existing, **body.model_dump()})
     await audit(user, "update", "bl_amount", f"Updated BL Amount {bid}")
     return {"ok": True}
 
