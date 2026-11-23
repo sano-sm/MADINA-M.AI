@@ -381,3 +381,35 @@ html[data-madina-theme="royal"] [style*="linear-gradient(155deg,#1c1c1f"] { back
   .ct-design-card { min-height:140px; }
   .ct-design-art { width:42px;height:45px; }
 }
+
+/* Detailed, reusable SVG artwork supersedes the former generic Lucide folder icons. */
+.ct-design-art--illustrated,
+.ct-folder-panel--b .ct-design-art--illustrated,
+.ct-folder-panel--c .ct-design-art--illustrated {
+  position:relative;display:flex;align-items:center;justify-content:center;
+  flex:0 0 auto;width:110px;height:105px;min-width:0;overflow:visible;
+  background:none;border:0;border-radius:0;box-shadow:none;
+  filter:none;
+}
+.ct-design-art--illustrated::after { content:none !important;display:none !important; }
+.ct-design-art--illustrated .ct-illustrated-icon { display:block;width:100%;height:100%;max-width:none;max-height:none;margin:0;overflow:visible;filter:none; }
+.ct-design-art--illustrated.ct-design-art--income svg,
+.ct-design-art--illustrated.ct-design-art--bl svg { margin:0; }
+.ct-folder-panel--c .ct-design-card { background:radial-gradient(ellipse at 50% 5%,#14735c 0%,#004c3d 45%,#002c26 100%);border-color:#e8b44c; }
+.ct-folder-panel--a .ct-design-card { background:radial-gradient(ellipse at 50% 5%,#243a5b,#08182d 85%); }
+.ct-folder-panel--b .ct-design-card { background:linear-gradient(145deg,#ffffff,#eaf4ff 70%,#c9e6ff); }
+@media(min-width:561px) {
+  .ct-design-art--illustrated { width:104px;height:100px; }
+}
+@media(max-width:560px) {
+  .ct-design-art--illustrated,
+  .ct-folder-panel--b .ct-design-art--illustrated,
+  .ct-folder-panel--c .ct-design-art--illustrated { width:65px;height:68px; }
+  .ct-design-card { min-height:165px; }
+}
+@media(max-width:360px) {
+  .ct-design-art--illustrated,
+  .ct-folder-panel--b .ct-design-art--illustrated,
+  .ct-folder-panel--c .ct-design-art--illustrated { width:52px;height:58px; }
+  .ct-design-card { min-height:150px; }
+}
