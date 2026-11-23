@@ -70,3 +70,11 @@ export function handleContainerDraft(input, state) {
   current[field] = data;
   return { state: { ...state, rows, current }, reply: `${field === "vehicle" ? "گاڑی" : field === "engine_number" ? "انجن نمبر" : "چیسس نمبر"}: ${data} — Draft میں شامل۔ اگلی تفصیل بولیں؛ آخر میں Done کہیں۔` };
 }
+
+/** Shared in-memory draft between MAI and external AI; cleared on page reload. */
+let sharedContainerDraft = initialContainerDraft();
+export function processContainerDraft(input) {
+  const outcome = handleContainerDraft(input, sharedContainerDraft);
+  if (outcome) sharedContainerDraft = outcome.state;
+  return outcome;
+}
