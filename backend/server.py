@@ -1947,8 +1947,8 @@ async def _archive_ct_document(kind: str, source: dict):
             {"kind": kind, "source_id": source_id},
             {"$set": {"data": data, "updated_at": now_iso()}})
     else:
-        counter = await sdb.ct_archive_counters.find_one_and_update(
-            {"kind": kind}, {"$inc": {"seq": 1}}, upsert=True,
+        counter = await db.ct_archive_counters.find_one_and_update(
+            {"kind": kind, "company_id": current_company.get()}, {"$inc": {"seq": 1}}, upsert=True,
             return_document=ReturnDocument.AFTER)
         seq = counter["seq"]
         await sdb.ct_document_archives.insert_one({
