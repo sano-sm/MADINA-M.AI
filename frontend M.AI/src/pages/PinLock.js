@@ -67,7 +67,7 @@ export default function PinLock() {
         <Languages size={16} /> {lang === "en" ? "اردو" : "English"}
       </button>
 
-      <div className="relative z-10 flex w-full max-w-xs flex-col items-center rounded-3xl px-4 py-7 backdrop-blur-[3px]" style={{background:pinTheme === "floral" ? "rgba(255,255,255,.68)" : "rgba(0,8,19,.35)",boxShadow:`0 0 55px ${accent}18`}>
+      <div className="relative z-10 flex w-full max-w-xs flex-col items-center rounded-3xl px-4 py-7 backdrop-blur-[3px]" style={{background:pinTheme === "floral" ? "rgba(255,255,255,.68)" : "rgba(0,8,19,.35)",boxShadow:`0 0 55px ${accent}18`}}>
         <img src="/logo.png" alt="MTC" className="mb-3 h-20 w-20 rounded-sm object-cover" />
         <h1 className="font-head text-xl font-black gold-text">{t("enter_pin")}</h1>
         <p className="mt-1 mb-6 text-center text-sm" style={{color:ink,opacity:.78}>{t("pin_subtitle")}</p>
