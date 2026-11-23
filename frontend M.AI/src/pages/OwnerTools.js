@@ -72,15 +72,15 @@ export default function OwnerTools() {
   return <div>
     <PageHeader title={t("owner_tools")} />
 
-    {!openFolder && <div className="mb-5 grid max-w-3xl grid-cols-1 gap-5 sm:grid-cols-2">
-      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface group rounded-xl border border-[var(--gold)]/30 p-4 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70">
-        <div className="flex items-center gap-3"><Folder className="h-9 w-9 text-[var(--gold)]" /><div><div className="font-head text-base font-bold text-white">Special Years</div><div className="mt-1 text-xs text-muted-foreground">{years.length} accounting years</div></div></div>
+    {!openFolder && <div className="mb-5 grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
+      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface w-full max-w-[220px] rounded-lg border border-[var(--gold)]/30 p-3 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70">
+        <div className="flex items-center gap-2"><Folder className="h-6 w-6 shrink-0 text-[var(--gold)]" /><div><div className="font-head text-sm font-bold text-white">Special Years</div><div className="mt-0.5 text-[11px] text-muted-foreground">{years.length} accounting years</div></div></div>
       </button>
-      <button type="button" onClick={() => setOpenFolder("invoices")} className="card-surface group rounded-xl border border-border p-4 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
-        <div className="flex items-center gap-3"><Folder className="h-9 w-9 text-[var(--gold)]" /><div><div className="font-head text-base font-bold text-white">Invoices</div><div className="mt-1 text-xs text-muted-foreground">Folder ready for invoice tools</div></div></div>
+      <button type="button" onClick={() => setOpenFolder("invoices")} className="card-surface w-full max-w-[220px] rounded-lg border border-border p-3 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
+        <div className="flex items-center gap-2"><Folder className="h-6 w-6 shrink-0 text-[var(--gold)]" /><div><div className="font-head text-sm font-bold text-white">Invoices</div><div className="mt-0.5 text-[11px] text-muted-foreground">Invoice folders</div></div></div>
       </button>
-      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface group rounded-xl border border-border p-4 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
-        <div className="flex items-center gap-3"><Folder className="h-9 w-9 text-[var(--gold)]" /><div><div className="font-head text-base font-bold text-white">Fiscal Years</div><div className="mt-1 text-xs text-muted-foreground">Close, reopen, and view snapshots</div></div></div>
+      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface w-full max-w-[220px] rounded-lg border border-border p-3 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
+        <div className="flex items-center gap-2"><Folder className="h-6 w-6 shrink-0 text-[var(--gold)]" /><div><div className="font-head text-sm font-bold text-white">Fiscal Years</div><div className="mt-0.5 text-[11px] text-muted-foreground">Close and snapshots</div></div></div>
       </button>
     </div>}
 
@@ -103,8 +103,8 @@ export default function OwnerTools() {
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
       <div className="mb-5 flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="rounded-xl border border-border bg-white/[0.03] p-3"><OwnerDocuments /></div>
-        <div className="grid gap-3">
+        <OwnerDocuments compact />
+        <div className="grid gap-4">
           <InvoiceFolderCard icon={<FilePlus size={20} />} title="Custom Invoice" description="Create a new custom invoice" />
           <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Custom Invoices" description="Saved custom invoices" />
         </div>
@@ -145,7 +145,7 @@ export default function OwnerTools() {
 function Snap({ label, value }) { return <div className="rounded-sm bg-white/5 p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-bold gold-text">{value}</div></div>; }
 function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold text-white">{title}</h3><div className="max-h-56 space-y-1 overflow-auto text-xs text-muted-foreground">{rows.length ? rows.map((x, i) => <div key={i} className="border-b border-border py-1">{x}</div>) : <div>—</div>}</div></div>; }
 function InvoiceFolderCard({ icon, title, description }) {
-  return <div className="rounded-xl border border-border bg-white/[0.03] p-4 transition hover:border-[var(--gold)]/60">
-    <div className="flex items-center gap-3"><div className="rounded-lg bg-[var(--gold)]/10 p-2 text-[var(--gold)]">{icon}</div><div className="min-w-0"><div className="font-head text-sm font-bold text-white">{title}</div><div className="mt-1 text-xs text-muted-foreground">{description}</div></div></div>
+  return <div className="rounded-lg border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
+    <div className="flex items-center gap-2"><div className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]">{icon}</div><div className="min-w-0"><div className="font-head text-sm font-bold text-white">{title}</div><div className="mt-0.5 text-[11px] text-muted-foreground">{description}</div></div></div>
   </div>;
 }

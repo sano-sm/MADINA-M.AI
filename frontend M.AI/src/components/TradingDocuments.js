@@ -4,6 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { Btn, Field, Input, Modal } from "@/components/kit";
 import { previewBlob, printWindow } from "@/lib/documentPreview";
 import { toast } from "sonner";
+import { FilePlus, Folder } from "lucide-react";
 
 const today = () => new Date().toLocaleDateString("sv-SE");
 const newRow = () => ({date:today(), name:"", chassis:"", gross:""});
@@ -73,7 +74,7 @@ export function IssuePanel({kind,party,fullReport}) {
     </Modal></>;
 }
 
-export function OwnerDocuments(){
+export function OwnerDocuments({compact=false}){
   const {settings}=useSettings();
   const [mode,setMode]=useState(""),[seller,setSeller]=useState({name:""}),[rows,setRows]=useState([]),[busy,setBusy]=useState(false);
   const [q,setQ]=useState(""),[docs,setDocs]=useState([]);const requestId=useRef(""),lock=useRef(false);
@@ -85,7 +86,12 @@ export function OwnerDocuments(){
     try{const {data}=await api.post("/paper",{kind:"manual",request_id:requestId.current,seller,rows});await readDocument(data.id);setMode("");}catch(e){failed(e);}finally{lock.current=false;setBusy(false);}
   }
   const total=rows.reduce((n,r)=>n+Number(r.gross||0),0),net=Math.round(total*10/11);
-  return <div className="mb-4 flex flex-wrap gap-2"><Btn onClick={start}>Manual Invoice</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn>
+  const actionCard = "flex w-full items-center gap-2 rounded-lg border border-border bg-white/[0.03] p-3 text-start transition hover:border-[var(--gold)]/60";
+  return <div className={compact ? "grid gap-4" : "mb-4 flex flex-wrap gap-2"}>
+    {compact ? <>
+      <button type="button" onClick={start} className={actionCard}><span className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]"><FilePlus size={20} /></span><span><span className="block font-head text-sm font-bold text-white">Manual Invoice</span><span className="block text-[11px] text-muted-foreground">Create a new invoice</span></span></button>
+      <button type="button" onClick={()=>setMode("archive")} className={actionCard}><span className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]"><Folder size={20} /></span><span><span className="block font-head text-sm font-bold text-white">Saved Invoices</span><span className="block text-[11px] text-muted-foreground">Open saved invoices</span></span></button>
+    </> : <><Btn onClick={start}>Manual Invoice</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
     <Modal open={mode==="manual"} onClose={()=>setMode("")} title="Manual purchase invoice" wide>
       <p className="my-2">To · {settings?.name} · {settings?.address} · {settings?.phone}</p>
       <form onSubmit={e=>{e.preventDefault();save();}} onChange={()=>{requestId.current=crypto.randomUUID();}}>
