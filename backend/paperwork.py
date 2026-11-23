@@ -130,3 +130,79 @@ def invoice_pdf(doc):
         c.drawRightString(w-margin,y,yen(amount))
     c.save()
     return out.getvalue()
+
+
+def auto_parts_invoice_pdf(doc):
+    """Two-page minimum A4 invoice: engine sheets, then chassis and parts."""
+    out = BytesIO()
+    c = Canvas(out, pagesize=A4)
+    w, h = A4
+    c.setTitle(doc["number"])
+    margin, right = 25, w - 25
+    width = right - margin
+    sections = doc.get("sections") or {}
+    engines = sections.get("engines") or []
+    chassis = sections.get("chassis") or []
+    parts = sections.get("parts") or []
+    total = sum(int(row.get("price") or 0) for rows in (engines, chassis, parts) for row in rows)
+    engine_pages = max(1, (len(engines) + 59) // 60)
+    def header(title, first=False):
+        c.setFillColor(GREEN)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(margin, h-36, "MADINA TRADING")
+        company = doc.get("to") or {}
+        style = ParagraphStyle("auto_parts_header", fontName="Helvetica", fontSize=8, leading=10, textColor=GREEN)
+        p = Paragraph(printable_markup(company.get("address") or ""), style)
+        _, ph = p.wrap(300, 60)
+        p.drawOn(c, margin, h-42-ph)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawRightString(right, h-35, doc["number"])
+        c.setFont("Helvetica", 9)
+        c.drawRightString(right, h-50, "Loading: " + str(doc.get("loading_date") or ""))
+        c.setFont("Helvetica-Bold", 11)
+        c.drawCentredString(w/2, h-92, title)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawRightString(right, h-108, "GRAND TOTAL: JPY {:,}".format(total))
+        c.setStrokeColor(GOLD)
+        c.line(margin, h-115, right, h-115)
+        return h-129
+    def table(title, rows, start, count, ytop, row_height):
+        c.setFillColor(GREEN)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawCentredString(w/2, ytop, title)
+        top = ytop - 9
+        col = [margin, margin+29, margin+width/2-75, margin+width/2,
+               margin+width/2+29, right-75, right]
+        bottom = top - (count+1)*row_height
+        c.setStrokeColor(colors.HexColor("#64748B"))
+        c.setLineWidth(0.55)
+        for x in col:
+            c.line(x, top, x, bottom)
+        for i in range(count+2):
+            y = top-i*row_height
+            c.line(margin,y,right,y)
+        c.setFont("Helvetica-Bold",7.5)
+        for j, label in enumerate(("No.","Number / Description","Price","No.","Number / Description","Price")):
+            c.drawString(col[j]+3, top-row_height+4, label)
+        c.setFont("Helvetica",7.5)
+        for i in range(count):
+            for side in (0,1):
+                idx = start+i+side*count
+                row = rows[idx] if idx < len(rows) else {}
+                base = side*3
+                y = top-(i+2)*row_height+4
+                c.drawString(col[base]+5,y,str(idx+1))
+                desc = str(row.get("number") or "")[:31]
+                c.drawString(col[base+1]+3,y,desc)
+                if row.get("price") not in ("",None):
+                    c.drawRightString(col[base+3]-4,y,"{:,}".format(int(row["price"])))
+        return bottom
+    for page in range(engine_pages):
+        y = header("ENGINE LIST")
+        table("ENGINE LIST", engines, page*60, 30, y, 19)
+        c.showPage()
+    y = header("CHASSIS & PARTS LIST")
+    bottom = table("CHASSIS LIST", chassis, 0, 6, y, 21)
+    table("PARTS LIST", parts, 0, 20, bottom-24, 20)
+    c.save()
+    return out.getvalue()
