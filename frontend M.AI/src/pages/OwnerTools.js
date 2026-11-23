@@ -27,7 +27,7 @@ export default function OwnerTools() {
   useEffect(() => { load(); }, [load]);
 
   const closeYear = async (y) => {
-    if (!window.confirm(`${t("close_year")} ${y.label}?`)) return;
+    if (!window.confirm("Close " + y.fiscal_year_start + "? This saves the profit and remaining-stock snapshot, carries stock into the next year, and starts a new profit period. Existing inventory, customers, brokers and balances will NOT be deleted. Download a Full Backup ZIP before proceeding.")) return;
     try { await api.post(`/owner/fiscal-years/${y.fiscal_year_start}/close`); toast.success(t("year_closed")); load(); }
     catch (e) { toast.error(apiError(e)); }
   };
@@ -82,6 +82,7 @@ export default function OwnerTools() {
     {(openFolder === "years" || openFolder === "close") && <section className="card-surface mb-5 rounded-sm p-5">
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
       <div className="mb-4 flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">{openFolder === "close" ? "Close Year" : "Special Years"}</h2><p className="text-xs text-muted-foreground">{openFolder === "close" ? "Close, reopen, or view a fiscal-year snapshot." : "Select a year to open its accounting summary."}</p></div></div>
+      <p className="mb-3 text-xs text-muted-foreground">Year closing saves a profit and stock snapshot. Remaining stock carries into the next year; customer and broker balances stay active. Download Full Backup ZIP first.</p>
       <div className="grid max-w-4xl grid-cols-3 gap-4">
         {years.map((y) => <div key={y.fiscal_year_start} className="rounded-xl border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
           <button type="button" onClick={() => openYear(y)} className="flex min-h-20 w-full flex-col items-center justify-center rounded-lg text-center hover:bg-[var(--gold)]/10"><div className="font-head text-xl font-bold tracking-wide text-white">{y.fiscal_year_start}</div><div className="mt-1 text-[11px] text-muted-foreground">{y.label}</div><Badge tone={y.closed ? "green" : "gold"}>{y.closed ? t("year_closed") : t("year_open")}</Badge></button>
