@@ -75,8 +75,8 @@ export default function OwnerTools() {
     {!openFolder && <div className="mb-5 grid max-w-md grid-cols-2 gap-4">
       <OwnerFolderButton icon={<Folder className="h-8 w-8" />} title="Special Years" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} gold />
       <OwnerFolderButton icon={<Folder className="h-8 w-8" />} title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
-      <OwnerFolderButton icon={<LockKeyhole className="h-8 w-8" />} title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} />
-      <OwnerFolderButton icon={<Archive className="h-8 w-8" />} title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} />
+      <OwnerUtilityButton icon={<LockKeyhole size={17} strokeWidth={1.5} />} title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} />
+      <OwnerUtilityButton icon={<Archive size={17} strokeWidth={1.5} />} title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} />
     </div>}
 
     {(openFolder === "years" || openFolder === "close") && <section className="card-surface mb-5 rounded-sm p-5">
@@ -138,5 +138,13 @@ function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold t
 function OwnerFolderButton({ icon, title, detail, onClick, gold=false }) {
   return <button type="button" onClick={onClick} className={`card-surface flex min-h-28 w-full max-w-[170px] flex-col items-center justify-center rounded-xl border p-3 text-center transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70 ${gold ? "border-[var(--gold)]/40" : "border-border"}`}>
     <span className={gold ? "gold-text" : "text-muted-foreground"}>{icon}</span><span className="mt-1 font-head text-xs font-bold text-white">{title}</span><span className="mt-0.5 text-[10px] text-muted-foreground">{detail}</span>
+  </button>;
+}
+
+function OwnerUtilityButton({ icon, title, detail, onClick }) {
+  return <button type="button" onClick={onClick} className="group relative flex h-[82px] w-full max-w-[138px] flex-col items-center justify-center rounded-lg border border-[var(--gold)]/30 bg-gradient-to-b from-[#55472f]/35 to-white/[0.02] px-2 py-2 text-center shadow-[0_3px_10px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]">
+    <span className="mb-1 text-[#d0b474]">{icon}</span>
+    <span className="font-head text-[11px] font-semibold leading-tight text-white">{title}</span>
+    <span className="mt-0.5 text-[9px] leading-tight text-muted-foreground">{detail}</span>
   </button>;
 }
