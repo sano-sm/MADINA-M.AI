@@ -6,7 +6,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Archive, ChevronLeft, Download, Eye, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
+import { Archive, ChevronLeft, Download, Eye, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
   const navigate = useNavigate();
@@ -72,11 +72,11 @@ export default function OwnerTools() {
   return <div>
     <PageHeader title={t("owner_tools")} />
 
-    {!openFolder && <div className="mb-5 grid max-w-md grid-cols-2 gap-4">
-      <OwnerFolderButton icon={<Folder className="h-8 w-8" />} title="Special Years" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} gold />
-      <OwnerFolderButton icon={<Folder className="h-8 w-8" />} title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
-      <OwnerUtilityButton icon={<LockKeyhole size={17} strokeWidth={1.5} />} title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} />
-      <OwnerUtilityButton icon={<Archive size={17} strokeWidth={1.5} />} title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} />
+    {!openFolder && <div className="mb-5 grid max-w-[310px] grid-cols-2 justify-items-center gap-x-5 gap-y-5">
+      <OwnerDesktopFolder title="Special Years" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
+      <OwnerDesktopFolder title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
+      <OwnerDesktopFolder title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} small />
+      <OwnerDesktopFolder title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} small />
     </div>}
 
     {(openFolder === "years" || openFolder === "close") && <section className="card-surface mb-5 rounded-sm p-5">
@@ -135,16 +135,16 @@ export default function OwnerTools() {
 
 function Snap({ label, value }) { return <div className="rounded-sm bg-white/5 p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-bold gold-text">{value}</div></div>; }
 function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold text-white">{title}</h3><div className="max-h-56 space-y-1 overflow-auto text-xs text-muted-foreground">{rows.length ? rows.map((x, i) => <div key={i} className="border-b border-border py-1">{x}</div>) : <div>—</div>}</div></div>; }
-function OwnerFolderButton({ icon, title, detail, onClick, gold=false }) {
-  return <button type="button" onClick={onClick} className={`card-surface flex min-h-28 w-full max-w-[170px] flex-col items-center justify-center rounded-xl border p-3 text-center transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70 ${gold ? "border-[var(--gold)]/40" : "border-border"}`}>
-    <span className={gold ? "gold-text" : "text-muted-foreground"}>{icon}</span><span className="mt-1 font-head text-xs font-bold text-white">{title}</span><span className="mt-0.5 text-[10px] text-muted-foreground">{detail}</span>
-  </button>;
-}
-
-function OwnerUtilityButton({ icon, title, detail, onClick }) {
-  return <button type="button" onClick={onClick} className="group relative flex h-[82px] w-full max-w-[138px] flex-col items-center justify-center rounded-lg border border-[var(--gold)]/30 bg-gradient-to-b from-[#55472f]/35 to-white/[0.02] px-2 py-2 text-center shadow-[0_3px_10px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]">
-    <span className="mb-1 text-[#d0b474]">{icon}</span>
-    <span className="font-head text-[11px] font-semibold leading-tight text-white">{title}</span>
-    <span className="mt-0.5 text-[9px] leading-tight text-muted-foreground">{detail}</span>
+function OwnerDesktopFolder({ title, detail, onClick, small=false }) {
+  return <button type="button" onClick={onClick} aria-label={title} title={detail}
+    className={`group relative block shrink-0 cursor-pointer border-0 bg-transparent p-0 text-center transition hover:-translate-y-0.5 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)] ${small ? "h-[80px] w-[98px]" : "h-[88px] w-[110px]"}`}>
+    <span aria-hidden="true" className="absolute inset-x-[3px] bottom-[5px] top-[13px] rounded-[8px] border border-[#b89754] bg-gradient-to-b from-[#806a3b] to-[#4a3820] shadow-[0_4px_10px_rgba(0,0,0,0.25)]" />
+    <span aria-hidden="true" className="absolute left-[5px] top-[7px] h-[16px] w-[43px] rounded-t-[5px] border border-b-0 border-[#d1ae65] bg-[#806a3b]" />
+    <span aria-hidden="true" className="absolute left-[20%] right-[17%] top-[16px] h-[36%] -rotate-[3deg] rounded-[3px] border border-slate-300 bg-white shadow-sm">
+      <span className="absolute left-[15%] top-[30%] h-[2px] w-[58%] bg-slate-300" />
+      <span className="absolute left-[15%] top-[53%] h-[2px] w-[45%] bg-slate-200" />
+    </span>
+    <span aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[32px] rounded-b-[9px] rounded-t-[5px] border border-[#d8b875] bg-gradient-to-b from-[#c5a45c] via-[#a58243] to-[#75552b] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_10px_rgba(0,0,0,0.18)]" />
+    <span className={`absolute inset-x-1 bottom-[13px] flex items-center justify-center font-head font-bold leading-tight text-[#241b11] ${small ? "text-[10px]" : "text-[11px]"}`}>{title}</span>
   </button>;
 }
