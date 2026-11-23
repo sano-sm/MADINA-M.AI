@@ -77,14 +77,25 @@ export function IssuePanel({kind,party,fullReport}) {
 export function OwnerDocuments({compact=false, invoiceKind="manual"}){
   const {settings}=useSettings();
   const [mode,setMode]=useState(""),[seller,setSeller]=useState({name:""}),[rows,setRows]=useState([]),[busy,setBusy]=useState(false);
+  const [autoParts,setAutoParts]=useState(null);
   const [q,setQ]=useState(""),[sortBy,setSortBy]=useState("date"),[docs,setDocs]=useState([]),[selected,setSelected]=useState([]),[archiveCount,setArchiveCount]=useState(0);const requestId=useRef(""),lock=useRef(false),pressTimer=useRef(null),suppressClick=useRef(false);
   useEffect(()=>{let active=true;api.get("/paper/archive",{params:{kind:invoiceKind==="custom"?"custom":"standard"}}).then(r=>{if(active)setArchiveCount(r.data.length);}).catch(()=>{});return()=>{active=false;};},[invoiceKind,mode]);
   useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q,kind:invoiceKind==="custom"?"custom":"standard",sort:sortBy}}).then(r=>{if(current){setDocs(r.data);setSelected([]);}}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q,invoiceKind,sortBy]);
   useEffect(()=>{const id=new URLSearchParams(window.location.search).get("record");if(id)readDocument(id).catch(failed);},[]);
-  function start(){setSeller({name:""});setRows([newRow()]);requestId.current=crypto.randomUUID();setMode("manual");}
+  function start(){requestId.current=crypto.randomUUID();if(invoiceKind==="custom"){setAutoParts({loading_date:today(),engines:Array.from({length:60},()=>({number:"",price:""})),chassis:Array.from({length:12},()=>({number:"",price:""})),parts:Array.from({length:40},()=>({number:"",price:""}))});setMode("auto");return;}setSeller({name:""});setRows([newRow()]);setMode("manual");}
   async function save(){
     if(lock.current)return;lock.current=true;setBusy(true);
     try{const {data}=await api.post("/paper",{kind:invoiceKind,request_id:requestId.current,seller,rows});await readDocument(data.id);setMode("");}catch(e){failed(e);}finally{lock.current=false;setBusy(false);}
+  }
+  async function saveAutoParts(){
+    if(lock.current || !autoParts)return;
+    lock.current=true;setBusy(true);
+    try {
+      const sections={};
+      for(const type of ["engines","chassis","parts"])sections[type]=autoParts[type].map(r=>({number:r.number.trim(),price:r.price===""?null:Number(r.price)}));
+      const {data}=await api.post("/paper/auto-parts",{request_id:requestId.current,loading_date:autoParts.loading_date,...sections});
+      await readDocument(data.id);setMode("");setAutoParts(null);
+    } catch(e){failed(e);} finally{lock.current=false;setBusy(false);}
   }
   function toggleSelected(id){setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);}
   function startPress(id){suppressClick.current=false;clearTimeout(pressTimer.current);pressTimer.current=setTimeout(()=>{suppressClick.current=true;toggleSelected(id);},550);}
@@ -108,6 +119,9 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
         <span className="absolute inset-x-1 bottom-[9px] flex flex-col items-center leading-tight text-[#241b11]"><span className="font-head text-[10px] font-semibold">{invoiceKind==="custom"?"Saved Custom":"Saved"}</span><span className="font-head text-[11px] font-bold">Invoices</span></span>
       </button>
     </> : <><Btn onClick={start}>{invoiceKind==="custom"?"Custom Invoice":"Purchase Invoice"}</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
+    <Modal open={mode==="auto"} onClose={()=>setMode("")} title="New Auto Parts Invoice" wide>
+      {autoParts && <AutoPartsEditor value={autoParts} onChange={v=>{setAutoParts(v);requestId.current=crypto.randomUUID();}} company={settings} busy={busy} onSave={saveAutoParts}/>}
+    </Modal>
     <Modal open={mode==="manual"} onClose={()=>setMode("")} title={invoiceKind==="custom"?"New Custom Invoice":"New Purchase Invoice"} wide>
       <p className="my-2">To · {settings?.name} · {settings?.address} · {settings?.phone}</p>
       <form onSubmit={e=>{e.preventDefault();save();}} onChange={()=>{requestId.current=crypto.randomUUID();}}>
@@ -145,4 +159,34 @@ export function Restore(){
   return <div className="mt-4 border-t pt-3"><Field label="Restore business backup ZIP"><input disabled={busy} type="file" accept=".zip" onChange={e=>{setFile(e.target.files[0]);setInfo(null);}}/></Field>
     <Btn variant="dark" disabled={!file||busy} onClick={()=>submit(false)}>Preview ZIP</Btn>
     {info&&<div className="my-2"><b>{info.company} · {info.date}</b><label className="my-2 block"><input type="checkbox" checked={copy} onChange={e=>setCopy(e.target.checked)}/> Create a separate recovery database</label><details><summary>Record counts</summary>{Object.entries(info.counts).map(([k,n])=><div key={k}>{k}: {n}</div>)}</details><Btn disabled={busy} onClick={()=>submit(true)}>{copy?"Create recovery copy":"Restore to empty test database"}</Btn></div>}{result&&<p className="my-2">Restored {result.company} · {result.database || "Current test database"}</p>}</div>;
+}
+
+function AutoPartsEditor({value,onChange,company,busy,onSave}) {
+  const setLine=(type,index,key,val)=>onChange({...value,[type]:value[type].map((r,i)=>i===index?{...r,[key]:val}:r)});
+  const sum=["engines","chassis","parts"].reduce((n,type)=>n+value[type].reduce((a,r)=>a+Number(r.price||0),0),0);
+  const inputClass="w-full min-w-0 border-0 bg-transparent px-1 py-1 text-[11px] text-white outline-none focus:bg-white/10";
+  function list(title,type,start,count) {
+    const rows=value[type];
+    return <div className="mt-4" key={title}>
+      <h3 className="mb-1 text-center font-head text-sm font-bold text-white">{title}</h3>
+      <div className="w-full overflow-x-auto"><table className="w-full min-w-[540px] table-fixed border-collapse border border-slate-400/70 text-left" dir="ltr">
+        <colgroup><col style={{width:"6%"}}/><col style={{width:"28%"}}/><col style={{width:"16%"}}/><col style={{width:"6%"}}/><col style={{width:"28%"}}/><col style={{width:"16%"}}/></colgroup>
+        <thead><tr>{["No.","Engine / Chassis / Part Number","Price (JPY)","No.","Engine / Chassis / Part Number","Price (JPY)"].map((t,i)=><th key={i} className="border border-slate-400/70 bg-white/10 px-1 py-1 text-[9px] font-semibold text-white">{t}</th>)}</tr></thead>
+        <tbody>{Array.from({length:count},(_,i)=><tr key={i}>{[0,1].map(side=>{const idx=start+i+side*count;return <React.Fragment key={side}><td className="border border-slate-400/70 text-center text-[10px]">{idx+1}</td><td className="border border-slate-400/70"><input aria-label={title+" number "+(idx+1)} className={inputClass} value={rows[idx]?.number||""} maxLength={80} onChange={e=>setLine(type,idx,"number",e.target.value)}/></td><td className="border border-slate-400/70"><input aria-label={title+" price "+(idx+1)} type="number" min="0" step="1" className={inputClass} value={rows[idx]?.price??""} onChange={e=>setLine(type,idx,"price",e.target.value)}/></td></React.Fragment>})}</tr>)}</tbody>
+      </table></div>
+    </div>;
+  }
+  return <div dir="ltr" className="text-left">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--gold)]/50 pb-3">
+      <div><h2 className="font-head text-lg font-bold text-white">{company?.name||"MADINA TRADING"}</h2><p className="max-w-xs whitespace-pre-line text-xs text-muted-foreground">{company?.address||"Company address from Settings"}</p></div>
+      <label className="text-xs text-white">Loading Date <input type="date" className="mt-1 block rounded border border-border bg-background p-2 text-white" value={value.loading_date} onChange={e=>onChange({...value,loading_date:e.target.value})}/></label>
+    </div>
+    <div className="mt-2 text-right text-sm font-bold text-white">Grand Total: {money(sum)}</div>
+    {Array.from({length:value.engines.length/60},(_,page)=>list("ENGINE LIST — Sheet "+(page+1),"engines",page*60,30))}
+    <button type="button" className="mt-3 rounded border border-[var(--gold)]/60 px-3 py-2 text-xs text-white" onClick={()=>onChange({...value,engines:[...value.engines,...Array.from({length:60},()=>({number:"",price:""}))]})}><Plus size={13} className="mr-1 inline"/>New Engine Sheet</button>
+    <p className="mt-3 text-xs text-muted-foreground">The following lists print on a separate PDF page.</p>
+    {list("CHASSIS LIST","chassis",0,6)}
+    {list("PARTS LIST","parts",0,20)}
+    <button type="button" disabled={busy} onClick={onSave} className="gold-gradient mt-5 rounded px-4 py-2 font-semibold text-black disabled:opacity-50">{busy?"Saving...":"Confirm & Save PDF"}</button>
+  </div>;
 }
