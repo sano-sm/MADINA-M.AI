@@ -211,3 +211,39 @@ html[data-madina-theme="white"] h3 {
   color: #111111;
   font-weight: 800;
 }
+
+/* Additional website appearance palettes; business records are unaffected. */
+html[data-madina-theme="emerald"] {
+  --gold: #e6c16a; --gold-dim: #bb9341;
+  --bg: #052721; --surface: #0a3830; --surface-2: #124b40; --border: #367367;
+  --background: 165 77% 9%; --foreground: 153 35% 95%;
+  --card: 167 70% 13%; --card-foreground: 153 35% 95%;
+  --popover: 167 70% 13%; --popover-foreground: 153 35% 95%;
+  --primary: 43 72% 66%; --primary-foreground: 165 77% 9%;
+  --secondary: 169 61% 18%; --secondary-foreground: 153 35% 95%;
+  --muted: 169 61% 18%; --muted-foreground: 156 22% 76%;
+  --accent: 43 72% 66%; --accent-foreground: 165 77% 9%;
+  --border: 169 36% 33%; --input: 169 36% 33%; --ring: 43 72% 66%;
+  --foreground-text: #f3f9f4; --tile-top: #15584a; --tile-bottom: #072f28;
+}
+html[data-madina-theme="royal"] {
+  --gold: #e8c27a; --gold-dim: #bb9359;
+  --bg: #211328; --surface: #32203d; --surface-2: #442b52; --border: #76577f;
+  --background: 282 36% 12%; --foreground: 286 34% 96%;
+  --card: 283 31% 18%; --card-foreground: 286 34% 96%;
+  --popover: 283 31% 18%; --popover-foreground: 286 34% 96%;
+  --primary: 39 70% 69%; --primary-foreground: 282 36% 12%;
+  --secondary: 283 31% 25%; --secondary-foreground: 286 34% 96%;
+  --muted: 283 31% 25%; --muted-foreground: 285 23% 77%;
+  --accent: 39 70% 69%; --accent-foreground: 282 36% 12%;
+  --border: 283 19% 42%; --input: 283 19% 42%; --ring: 39 70% 69%;
+  --foreground-text: #fbf3fc; --tile-top: #543262; --tile-bottom: #291830;
+}
+html[data-madina-theme="emerald"] body { color: #f3f9f4; }
+html[data-madina-theme="royal"] body { color: #fbf3fc; }
+html[data-madina-theme="emerald"] .card-surface { background: #0a3830; border-color: #367367; }
+html[data-madina-theme="royal"] .card-surface { background: #32203d; border-color: #76577f; }
+html[data-madina-theme="emerald"] [style*="linear-gradient(160deg,#1c1c1f"],
+html[data-madina-theme="emerald"] [style*="linear-gradient(155deg,#1c1c1f"] { background: linear-gradient(155deg,#15584a,#072f28) !important; }
+html[data-madina-theme="royal"] [style*="linear-gradient(160deg,#1c1c1f"],
+html[data-madina-theme="royal"] [style*="linear-gradient(155deg,#1c1c1f"] { background: linear-gradient(155deg,#543262,#291830) !important; }
