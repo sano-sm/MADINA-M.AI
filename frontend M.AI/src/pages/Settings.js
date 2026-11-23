@@ -103,7 +103,7 @@ function Company({ t, manage }) {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              if (file.size > 1200000) { toast.error("Photo too large (maximum 1.2 MB)"); return; }
+              if (file.size > 3 * 1024 * 1024) { toast.error("Photo too large (maximum 3 MB)"); e.target.value = ""; return; }
               const reader = new FileReader();
               reader.onload = async () => {
                 const photo = reader.result;
