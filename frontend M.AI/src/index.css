@@ -140,7 +140,7 @@ html[data-madina-theme="navy"] {
 html[data-madina-theme="white"] body { color: #17191d; }
 html[data-madina-theme="navy"] body { color: #eef5ff; }
 /* Normalize legacy dark-only utilities throughout application screens. */
-html[data-madina-theme="white"] .text-white:not(.gold-gradient):not(.ci-paper *):not(.gold-text),
+html[data-madina-theme="white"] .text-white:not(.gold-gradient):not(.gold-text),
 html[data-madina-theme="white"] .text-gray-100,
 html[data-madina-theme="white"] .text-gray-200,
 html[data-madina-theme="white"] .text-gray-300,
@@ -148,14 +148,8 @@ html[data-madina-theme="white"] .text-slate-200,
 html[data-madina-theme="white"] .text-slate-300 { color: #20242b !important; }
 html[data-madina-theme="white"] .bg-black,
 html[data-madina-theme="white"] .bg-gray-900,
-html[data-madina-theme="white"] .bg-slate-900,
-html[data-madina-theme="white"] .bg-\\[\\#06111f\\],
-html[data-madina-theme="white"] .bg-\\[\\#081827\\] { background-color: #fff !important; }
-html[data-madina-theme="white"] .bg-white\\/5,
-html[data-madina-theme="white"] .bg-white\\/10 { background-color: rgba(0,0,0,.045) !important; }
-html[data-madina-theme="white"] .border-white\\/5,
-html[data-madina-theme="white"] .border-white\\/10,
-html[data-madina-theme="white"] .border-white\\/20 { border-color: rgba(0,0,0,.18) !important; }
+html[data-madina-theme="white"] .bg-slate-900 { background-color: #fff !important; }
+/* Avoid escaped Tailwind utility selectors: these were rejected by the CSS build parser. */
 html[data-madina-theme="white"] .quick-access-c .text-white { color: #17191d !important; }
 html[data-madina-theme="white"] .quick-access-c .text-emerald-400 { color: #047857 !important; }
 html[data-madina-theme="white"] .ci-paper,
