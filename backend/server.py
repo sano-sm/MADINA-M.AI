@@ -4154,6 +4154,70 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
     }
 
 
+async def build_owner_annual_summary(year: int, end_date: str = None) -> dict:
+    """Read-only yearly business totals; independent of Container & TT."""
+    prior = await sdb.fiscal_snapshots.find_one(
+        {"fiscal_year_start": year - 1}, {"_id": 0, "close_date": 1})
+    start = _next_day(prior["close_date"]) if prior and prior.get("close_date") else f"{year}-01-01"
+    end = end_date or (now_iso()[:10] if year == _current_fiscal_year_start(current_company.get()) else f"{year}-12-31")
+    if end < start:
+        end = start
+    def date_filter(field):
+        return {field: {"$gte": start, "$lte": end + "T23:59:59"}}
+    def amount(rows, key):
+        return round(sum(float(x.get(key) or 0) for x in rows), 2)
+    vehicles = await sdb.vehicles.find({}, {"_id": 0}).to_list(50000)
+    purchased = [v for v in vehicles if start <= str(v.get("purchase_date") or "")[:10] <= end]
+    dismantled = [v for v in vehicles if start <= str(v.get("dismantle_date") or "")[:10] <= end]
+    complete = [v for v in vehicles if v.get("status") in ("sold", "sold_complete") and start <= str(v.get("sale_date") or "")[:10] <= end]
+    direct_parts = await sdb.parts.find({}, {"_id": 0}).to_list(50000)
+    parts_bought = [p for p in direct_parts if not p.get("source_vehicle_id") and start <= str(p.get("purchase_date") or p.get("created_at") or "")[:10] <= end]
+    tracked = await sdb.tracked_parts.find({}, {"_id": 0}).to_list(50000)
+    tracked_bought = [p for p in tracked if p.get("source") == "direct" and start <= str(p.get("purchase_date") or p.get("date") or "")[:10] <= end]
+    tracked_sold = [p for p in tracked if p.get("status") == "sold" and start <= str(p.get("sale_date") or "")[:10] <= end]
+    part_sales = await sdb.part_sales.find(date_filter("date"), {"_id": 0}).to_list(50000)
+    scrap = await sdb.scrap_allocations.find(date_filter("date"), {"_id": 0}).to_list(50000)
+    shokubai = await sdb.shokubai_allocations.find(date_filter("sale_date"), {"_id": 0}).to_list(50000)
+    small_sales = await sdb.small_sales.find(date_filter("date"), {"_id": 0}).to_list(50000)
+    expenses = await sdb.expenses.find(date_filter("date"), {"_id": 0}).to_list(50000)
+    salaries = await sdb.salaries.find(date_filter("date"), {"_id": 0}).to_list(50000)
+    invoices = await sdb.invoices.find(date_filter("created_at"), {"_id": 0}).to_list(50000)
+    engine = sum(float(p.get("sale_price") or 0) for p in tracked_sold if p.get("part_type") == "engine")
+    engine += sum(float(p.get("sale_price") or 0) for p in part_sales if p.get("category") == "engine")
+    spare = sum(float(p.get("sale_price") or 0) for p in tracked_sold if p.get("part_type") not in ("engine",))
+    spare += sum(float(p.get("sale_price") or 0) for p in part_sales if p.get("category") != "engine")
+    purchase_total = (amount(purchased, "purchase_price")
+        + sum(float(p.get("unit_cost") or 0) * float(p.get("purchased_quantity", p.get("quantity", 0)) or 0) for p in parts_bought)
+        + amount(tracked_bought, "purchase_price"))
+    pnl = await compute_pnl(start, end)
+    return {
+        "year": year, "period_start": start, "period_end": end,
+        "purchasing_total": round(purchase_total, 2),
+        "dismantled_count": len(dismantled), "dismantled_purchase_value": amount(dismantled, "purchase_price"),
+        "complete_sold_count": len(complete), "complete_sales_amount": amount(complete, "sale_price"),
+        "engine_sales": round(engine, 2), "spare_parts_sales": round(spare, 2),
+        "shokubai_sales": amount(shokubai, "total_amount"), "scrap_sales": amount(scrap, "total_amount"),
+        "local_other_sales": amount(small_sales, "amount"),
+        "invoice_sales": round(sum(float(x.get("total", x.get("subtotal", 0)) or 0) for x in invoices), 2),
+        "expenses_total": round(amount(expenses, "amount") + amount(salaries, "amount"), 2),
+        "net_profit": pnl["net_profit"],
+        "profit_scope": "Invoice P&L only; other recovery/sales categories shown separately",
+    }
+
+
+@api.get("/owner/fiscal-years/{fiscal_year_start}/summary")
+async def owner_annual_summary(fiscal_year_start: int, user: dict = Depends(require("settings.manage"))):
+    if fiscal_year_start < 2000 or fiscal_year_start > 2200:
+        raise HTTPException(status_code=400, detail="Invalid year")
+    snap = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
+    if snap and snap.get("annual_summary"):
+        return {"summary": snap["annual_summary"], "closing_stock": snap.get("closing_stock"),
+                "closed": True, "closed_at": snap.get("close_date")}
+    summary = await build_owner_annual_summary(fiscal_year_start)
+    stock = await compute_stock_valuation() if fiscal_year_start == _current_fiscal_year_start(current_company.get()) else None
+    return {"summary": summary, "closing_stock": stock, "closed": bool(snap), "closed_at": (snap or {}).get("close_date")}
+
+
 @api.get("/owner/fiscal-years")
 async def owner_fiscal_years(user: dict = Depends(require("settings.manage"))):
     current = _current_fiscal_year_start(current_company.get())
@@ -4199,6 +4263,7 @@ async def owner_close_fiscal_year(fiscal_year_start: int, user: dict = Depends(r
     if fiscal_year_start != _current_fiscal_year_start(current_company.get()) and fiscal_year_start != 2026:
         raise HTTPException(status_code=409, detail="Only the current operating year can be closed")
     snap = await build_fiscal_snapshot(fiscal_year_start)
+    snap["annual_summary"] = await build_owner_annual_summary(fiscal_year_start, snap["close_date"])
     payload = {"closed": True, "closed_at": now_iso(), "updated_at": now_iso()}
     meta = await sdb.fiscal_years.find_one({"fiscal_year_start": fiscal_year_start}, {"_id": 0})
     if meta:
