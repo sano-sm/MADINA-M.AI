@@ -164,10 +164,10 @@ export default function Launcher() {
         <div className="flex items-start gap-1">
         <button data-testid="home-owner-avatar" onClick={() => can("settings.manage") ? navigate("/owner") : (can("settings.view") && navigate("/settings?tab=users_roles"))}
           className="flex flex-col items-center gap-0.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold)]/50 bg-[var(--surface-2)]">
-            <User size={20} className="gold-text" />
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--gold)] bg-[var(--surface-2)] shadow-[0_0_12px_rgba(212,175,55,0.18)]">
+            {settings?.owner_photo_url ? <img src={settings.owner_photo_url} alt="Owner" className="h-full w-full object-cover" /> : <User size={25} className="gold-text" />}
           </span>
-          <span className="text-[9px] gold-text">{user?.role}</span>
+          <span className="text-[12px] font-black uppercase tracking-[0.1em] gold-text" style={{textShadow:"0 1px 5px rgba(212,175,55,.25)"}}>{user?.role?.toLowerCase() === "owner" ? "OWNER" : user?.role}</span>
         </button>
         {prefs.master && prefs.camera && <button type="button" title="Camera privacy review" aria-label="Camera privacy review" onClick={() => setCameraOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Camera size={15}/></button>}
           <button type="button" data-testid="catalog-search-btn" title="Model / Engine Lookup" aria-label="Model / Engine Lookup" onClick={() => setCatalogOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Search size={15}/></button>
