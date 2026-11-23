@@ -97,7 +97,7 @@ export default function OwnerTools() {
     {openFolder === "invoices" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
       <div className="mb-5 flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div>
-      <div className="grid grid-cols-2 items-start justify-between gap-x-8 gap-y-5 sm:gap-x-20">
+      <div className="grid grid-cols-2 items-start justify-between gap-x-10 gap-y-6 px-1 pt-1 sm:gap-x-24 sm:px-5">
         <OwnerDocuments compact invoiceKind="manual" />
         <OwnerDocuments compact invoiceKind="custom" />
       </div>
