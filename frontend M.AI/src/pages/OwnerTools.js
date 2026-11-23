@@ -6,7 +6,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Archive, ChevronLeft, Download, Eye, FilePlus, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
+import { Archive, Boxes, Car, ChevronLeft, Download, Eye, Folder, FolderOpen, LockKeyhole, Plus, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
   const navigate = useNavigate();
@@ -100,8 +100,8 @@ export default function OwnerTools() {
       <div className="grid gap-5 sm:grid-cols-2">
         <OwnerDocuments compact />
         <div className="grid gap-4">
-          <InvoiceFolderCard icon={<FilePlus size={20} />} title="Custom Invoice" description="Create a new custom invoice" />
-          <InvoiceFolderCard icon={<Folder size={20} />} title="Saved Custom Invoices" description="Saved custom invoices" />
+          <InvoiceFolderCard icon={<Plus size={18} />} title="Custom Invoice" description="Create a new custom invoice" />
+          <InvoiceFolderCard icon={<Boxes size={18} />} title="Saved Custom Invoices" description="Saved custom invoices" />
         </div>
       </div>
     </section>}

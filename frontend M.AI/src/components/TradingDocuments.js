@@ -4,7 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { Btn, Field, Input, Modal } from "@/components/kit";
 import { previewBlob, printWindow } from "@/lib/documentPreview";
 import { toast } from "sonner";
-import { FilePlus, Folder } from "lucide-react";
+import { Car, Plus } from "lucide-react";
 
 const today = () => new Date().toLocaleDateString("sv-SE");
 const newRow = () => ({date:today(), name:"", chassis:"", gross:""});
@@ -89,8 +89,8 @@ export function OwnerDocuments({compact=false}){
   const actionCard = "flex w-full items-center gap-2 rounded-lg border border-border bg-white/[0.03] p-3 text-start transition hover:border-[var(--gold)]/60";
   return <div className={compact ? "grid gap-4" : "mb-4 flex flex-wrap gap-2"}>
     {compact ? <>
-      <button type="button" onClick={start} className={actionCard}><span className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]"><FilePlus size={20} /></span><span><span className="block font-head text-sm font-bold text-white">Manual Invoice</span><span className="block text-[11px] text-muted-foreground">Create a new invoice</span></span></button>
-      <button type="button" onClick={()=>setMode("archive")} className={actionCard}><span className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]"><Folder size={20} /></span><span><span className="block font-head text-sm font-bold text-white">Saved Invoices</span><span className="block text-[11px] text-muted-foreground">Open saved invoices</span></span></button>
+      <button type="button" onClick={start} className={actionCard}><span className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]"><Plus size={18} /></span><span><span className="block font-head text-sm font-bold text-white">Manual Invoice</span><span className="block text-[11px] text-muted-foreground">Create a new invoice</span></span></button>
+      <button type="button" onClick={()=>setMode("archive")} className={actionCard}><span className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]"><Car size={18} /></span><span><span className="block font-head text-sm font-bold text-white">Saved Invoices</span><span className="block text-[11px] text-muted-foreground">Open saved invoices</span></span></button>
     </> : <><Btn onClick={start}>Manual Invoice</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
     <Modal open={mode==="manual"} onClose={()=>setMode("")} title="Manual purchase invoice" wide>
       <p className="my-2">To · {settings?.name} · {settings?.address} · {settings?.phone}</p>
