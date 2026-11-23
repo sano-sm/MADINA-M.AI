@@ -8,9 +8,9 @@ import { useSettings } from "@/context/SettingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { PageHeader, Btn, Modal, Field, Input, Select, Empty, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Plus, Trash2, Building2, Users, Shield, Lock, Bot } from "lucide-react";
+import { Plus, Trash2, Building2, Users, Shield, Lock, Bot, Palette, Check } from "lucide-react";
 
-const TABS = [{ k: "company_profile", icon: Building2 }, { k: "users_roles", icon: Users }, { k: "manage_roles", icon: Shield }, { k: "security", icon: Lock }, { k: "ai_controls", icon: Bot }];
+const TABS = [{ k: "company_profile", icon: Building2 }, { k: "users_roles", icon: Users }, { k: "manage_roles", icon: Shield }, { k: "security", icon: Lock }, { k: "ai_controls", icon: Bot }, { k: "appearance", icon: Palette }];
 
 export default function Settings() {
   const { t } = useI18n();
@@ -28,6 +28,7 @@ export default function Settings() {
             <x.icon size={15} />{t(x.k)}
           </button>))}
       </div>
+      {tab === "appearance" && <AppearanceTheme />}
       {tab === "company_profile" && <Company t={t} manage={manage} />}
       {tab === "users_roles" && <UsersTab t={t} manage={manage} />}
       {tab === "manage_roles" && <RolesTab t={t} manage={manage} />}
@@ -35,6 +36,26 @@ export default function Settings() {
       {tab === "ai_controls" && (manage ? <AiControls /> : <div className="text-sm text-muted-foreground">Owner / settings manager permission required.</div>)}
     </div>
   );
+}
+
+function AppearanceTheme() {
+  const { theme, setTheme } = useSettings();
+  const choices = [
+    { key: "black", label: "Black", sample: "#0c0c0d", text: "#f5f5f5" },
+    { key: "white", label: "White", sample: "#ffffff", text: "#161616" },
+    { key: "navy", label: "Midnight Blue", sample: "#0b1c35", text: "#eef4ff" },
+  ];
+  return <div className="card-surface max-w-2xl rounded-xl p-5">
+    <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Palette size={21} className="gold-text" /> Website Appearance</h2>
+    <p className="mb-5 text-sm text-muted-foreground">Choose one background theme for all website pages. Your choice is saved on this device.</p>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {choices.map(c => <button type="button" key={c.key} data-testid={`theme-${c.key}`} onClick={() => setTheme(c.key)}
+        aria-pressed={theme === c.key} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${theme === c.key ? "border-[var(--gold)] ring-2 ring-[var(--gold)]/40" : "border-border hover:border-[var(--gold)]/50"}`}>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-gray-400/40" style={{background:c.sample,color:c.text}}>{theme===c.key&&<Check size={24}/>}</span>
+        <span className="font-semibold">{c.label}</span>
+      </button>)}
+    </div>
+  </div>;
 }
 
 function Company({ t, manage }) {
