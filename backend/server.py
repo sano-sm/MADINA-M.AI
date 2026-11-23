@@ -4384,7 +4384,7 @@ class PaperRow(BaseModel):
 
 class PaperRequest(BaseModel):
     request_id: UUID
-    kind: str = Field(pattern="^(broker|customer|manual)$")
+    kind: str = Field(pattern="^(broker|customer|manual|custom)$")
     party_id: str = ""
     selected: List[str] = Field(default_factory=list, max_length=1000)
     seller: Optional[PaperParty] = None
@@ -4392,7 +4392,7 @@ class PaperRequest(BaseModel):
 
 
 def paper_permission(kind, user):
-    perm = {"broker": "finance.view", "customer": "customers.view", "manual": "settings.manage"}.get(kind)
+    perm = {"broker": "finance.view", "customer": "customers.view", "manual": "settings.manage", "custom": "settings.manage"}.get(kind)
     if not perm or perm not in user["permissions"]:
         raise HTTPException(403, "Company document access required")
 
@@ -4447,7 +4447,7 @@ async def issue_document(body: PaperRequest, user: dict = Depends(get_current_us
     settings = await sdb.settings.find_one({"id": settings_id()}, {"_id": 0}) or {}
     if not settings.get("name"):
         raise HTTPException(400, "Save the active company's name in Settings first")
-    if body.kind == "manual":
+    if body.kind in ("manual", "custom"):
         if not body.seller:
             raise HTTPException(400, "Enter seller name")
         party = body.seller.model_dump()
@@ -4474,7 +4474,7 @@ async def issue_document(body: PaperRequest, user: dict = Depends(get_current_us
         upsert=True, return_document=ReturnDocument.AFTER,
     )
     sequence = int((counter or {}).get("paper_invoice_seq", 1))
-    number_prefix = "INV" if body.kind == "manual" else cid
+    number_prefix = "CINV" if body.kind == "custom" else ("INV" if body.kind == "manual" else cid)
     doc = {"id": str(uuid.uuid5(uuid.NAMESPACE_URL,key)), "kind": body.kind, "company_id": cid, "created_by": user["id"],
            "number": f"{number_prefix}{invoice_year}-{sequence:03d}", "date": datetime.now(timezone(timedelta(hours=9))).date().isoformat(),
            "from": {k: source.get(k) for k in fields}, "to": {k: target.get(k) for k in ("name","phone","address")},
@@ -4486,12 +4486,14 @@ async def issue_document(body: PaperRequest, user: dict = Depends(get_current_us
 
 
 @api.get("/paper/archive")
-async def archive_search(q: str = "", user: dict = Depends(require("settings.manage"))):
-    cond = {}
+async def archive_search(q: str = "", kind: str = "standard", sort: str = "date", user: dict = Depends(require("settings.manage"))):
+    if kind not in ("standard", "custom") or sort not in ("date", "number"):
+        raise HTTPException(400, "Invalid archive filter")
+    cond = {"kind": "custom"} if kind == "custom" else {"kind": {"$ne": "custom"}}
     if q.strip():
         term = {"$regex": re.escape(q.strip()[:120]), "$options": "i"}
         cond["$or"] = [{k: term} for k in ("number","party","rows.name","rows.chassis")]
-    return await sdb.issued_documents.find(cond, {"_id":0,"id":1,"number":1,"party":1,"date":1}).sort("created_at",-1).to_list(None)
+    return await sdb.issued_documents.find(cond, {"_id":0,"id":1,"number":1,"party":1,"date":1}).sort([("number", -1)] if sort == "number" else [("date", -1), ("created_at", -1)]).to_list(None)
 
 
 @api.delete("/paper/{doc_id}")
