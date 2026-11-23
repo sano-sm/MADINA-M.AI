@@ -600,7 +600,9 @@ function MonthlySummarySection() {
   }, [month]);
 
   useEffect(() => {
-    loadYears().then((fy) => loadData(fy)).catch((e) => toast.error(apiError(e)));
+    const requested = Number(new URLSearchParams(window.location.search).get("year"));
+    const preferred = Number.isFinite(requested) && requested >= 2000 ? requested : undefined;
+    loadYears(preferred).then((fy) => loadData(fy)).catch((e) => toast.error(apiError(e)));
     // Company changes trigger a full app reload, so this is intentionally mount-only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
