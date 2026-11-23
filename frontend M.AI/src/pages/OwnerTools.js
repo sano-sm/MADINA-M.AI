@@ -1,6 +1,5 @@
 import { OwnerDocuments, Restore } from "@/components/TradingDocuments";
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api, apiError } from "@/lib/api";
 import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
@@ -9,7 +8,6 @@ import { toast } from "sonner";
 import { Archive, ChevronLeft, Download, Eye, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
-  const navigate = useNavigate();
   const { t } = useI18n();
   const { money } = useSettings();
   const [years, setYears] = useState([]);
@@ -40,7 +38,7 @@ export default function OwnerTools() {
     try { const { data } = await api.get(`/owner/fiscal-years/${y.fiscal_year_start}/snapshot`); setSnapshot(data); }
     catch (e) { toast.error(apiError(e)); }
   };
-  const openYear = (y) => navigate(`/container?year=${encodeURIComponent(y.fiscal_year_start)}`);
+  const openYear = (y) => { if (y.snapshot_at) viewSnapshot(y); else toast.info(`${y.fiscal_year_start} is open. Its closing profit and stock report will appear here after year closing.`); };
   const backup = async () => {
     setBusy(true);
     try {
@@ -73,26 +71,24 @@ export default function OwnerTools() {
     <PageHeader title={t("owner_tools")} />
 
     {!openFolder && <div className="mb-5 grid w-full max-w-[460px] grid-cols-2 justify-items-center gap-x-8 gap-y-8 px-1 sm:gap-x-12">
-      <OwnerDesktopFolder title="Special Years" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
+      <OwnerDesktopFolder title="Year Archives" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
       <OwnerDesktopFolder title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
-      <OwnerDesktopFolder title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} small />
       <OwnerDesktopFolder title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} small />
     </div>}
 
-    {(openFolder === "years" || openFolder === "close") && <section className="card-surface mb-5 rounded-sm p-5">
+    {openFolder === "years" && <section className="card-surface mb-5 rounded-sm p-5">
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
-      <div className="mb-4 flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">{openFolder === "close" ? "Close Year" : "Special Years"}</h2><p className="text-xs text-muted-foreground">{openFolder === "close" ? "Close, reopen, or view a fiscal-year snapshot." : "Select a year to open its accounting summary."}</p></div></div>
-      <p className="mb-3 text-xs text-muted-foreground">Year closing saves a profit and stock snapshot. Remaining stock carries into the next year; customer and broker balances stay active. Download Full Backup ZIP first.</p>
-      <div className="grid max-w-4xl grid-cols-3 gap-4">
+      <div className="mb-4 flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">Year Archives</h2><p className="text-xs text-muted-foreground">Independent annual business records. Container & TT is not linked to this folder.</p></div></div>
+      <p className="mb-3 text-xs text-muted-foreground">Closed years preserve profit and remaining stock. Opening stock carries forward; customers, brokers and current inventory remain active. Download Full Backup ZIP before closing a year.</p>
+      <div className="grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-3">
         {years.map((y) => <div key={y.fiscal_year_start} className="rounded-xl border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
-          <button type="button" onClick={() => openYear(y)} className="flex min-h-20 w-full flex-col items-center justify-center rounded-lg text-center hover:bg-[var(--gold)]/10"><div className="font-head text-xl font-bold tracking-wide text-white">{y.fiscal_year_start}</div><div className="mt-1 text-[11px] text-muted-foreground">{y.label}</div><Badge tone={y.closed ? "green" : "gold"}>{y.closed ? t("year_closed") : t("year_open")}</Badge></button>
-          {openFolder === "close" && <div className="mt-2 flex justify-center gap-1 border-t border-border pt-2">
-            {y.snapshot_at && <Btn variant="ghost" onClick={() => viewSnapshot(y)}><Eye size={13} /></Btn>}
-            {y.closed ? <Btn variant="dark" onClick={() => reopenYear(y)}><UnlockKeyhole size={13} /></Btn> : <Btn onClick={() => closeYear(y)}><LockKeyhole size={13} /></Btn>}
-          </div>}
+          <button type="button" onClick={() => openYear(y)} className="flex min-h-20 w-full flex-col items-center justify-center rounded-lg text-center hover:bg-[var(--gold)]/10"><div className="font-head text-xl font-bold tracking-wide text-white">{y.fiscal_year_start}</div><Badge tone={y.closed ? "green" : "gold"}>{y.closed ? "Year Closed" : "Year Open"}</Badge></button>
+          <div className="mt-2 flex flex-wrap justify-center gap-1 border-t border-border pt-2">
+            {y.snapshot_at && <Btn variant="ghost" onClick={() => viewSnapshot(y)}><Eye size={13} /> View</Btn>}
+            {y.closed ? <Btn variant="dark" onClick={() => reopenYear(y)}><UnlockKeyhole size={13} /> Reopen</Btn> : !y.snapshot_at && <Btn onClick={() => closeYear(y)}><LockKeyhole size={13} /> Close</Btn>}
+          </div>
         </div>)}
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">{t("fiscal_snapshot_hint")}</p>
     </section>}
 
     {openFolder === "invoices" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
