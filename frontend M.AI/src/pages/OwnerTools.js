@@ -6,7 +6,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Archive, Boxes, Car, ChevronLeft, Download, Eye, Folder, FolderOpen, LockKeyhole, Plus, UnlockKeyhole } from "lucide-react";
+import { Archive, ChevronLeft, Download, Eye, Folder, FolderOpen, LockKeyhole, Plus, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
   const navigate = useNavigate();
@@ -97,11 +97,11 @@ export default function OwnerTools() {
     {openFolder === "invoices" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
       <div className="mb-5 flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-2 items-start gap-x-8 gap-y-4">
         <OwnerDocuments compact />
-        <div className="grid gap-4">
-          <InvoiceFolderCard icon={<Plus size={18} />} title="Custom Invoice" description="Create a new custom invoice" />
-          <InvoiceFolderCard icon={<Boxes size={18} />} title="Saved Custom Invoices" description="Saved custom invoices" />
+        <div className="grid justify-items-center gap-4">
+          <InvoiceFolderCard compact icon={<Plus size={18} />} title="Custom Invoice" description="New" />
+          <InvoiceFolderCard icon={<Folder size={22} />} title="Saved Custom Invoices" description="Folder" />
         </div>
       </div>
     </section>}
@@ -143,8 +143,8 @@ function OwnerFolderButton({ icon, title, detail, onClick, gold=false }) {
     <span className={gold ? "gold-text" : "text-muted-foreground"}>{icon}</span><span className="mt-1 font-head text-xs font-bold text-white">{title}</span><span className="mt-0.5 text-[10px] text-muted-foreground">{detail}</span>
   </button>;
 }
-function InvoiceFolderCard({ icon, title, description }) {
-  return <div className="rounded-lg border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
-    <div className="flex items-center gap-2"><div className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]">{icon}</div><div className="min-w-0"><div className="font-head text-sm font-bold text-white">{title}</div><div className="mt-0.5 text-[11px] text-muted-foreground">{description}</div></div></div>
+function InvoiceFolderCard({ icon, title, description, compact=false }) {
+  return <div className={`${compact ? "h-[68px] border-[#806b3a]" : "h-[104px] border-border"} flex w-[104px] flex-col items-center justify-center rounded-xl border bg-white/[0.03] p-2 text-center transition hover:border-[var(--gold)]/70`}>
+    <div className="text-[var(--gold)]">{icon}</div><div className="mt-1 font-head text-[11px] font-bold leading-tight text-white">{title}</div><div className="mt-0.5 text-[9px] text-muted-foreground">{description}</div>
   </div>;
 }
