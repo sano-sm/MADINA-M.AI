@@ -7,10 +7,10 @@ function viewer(title) {
   panel.setAttribute("aria-label",title);
   panel.style.cssText = "position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;background:white;color:#18392e";
   const bar = document.createElement("div");
-  bar.style.cssText = "display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:12px;padding-top:max(12px,env(safe-area-inset-top));background:white";
+  bar.style.cssText = "display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));background:white;flex-shrink:0";
   const frame = document.createElement("iframe");
   frame.title = title;
-  frame.style.cssText = "display:block;width:100%;height:calc(100% - 58px);border:0";
+  frame.style.cssText = "display:block;width:100%;height:100%;min-height:0;border:0;overflow:auto";
   function action(label, fn) {
     const button = document.createElement("button");
     button.textContent = label;
@@ -18,6 +18,8 @@ function viewer(title) {
     bar.appendChild(button);
   }
   action("✕  Back / واپس",() => panel.close());
+  panel.style.display = "flex";
+  panel.style.flexDirection = "column";
   panel.append(bar,frame);
   document.body.appendChild(panel);
   panel.onclose = () => panel.remove();
@@ -36,7 +38,9 @@ export function previewBlob(data, filename) {
   const blob = new Blob([data],{type:"application/pdf"});
   const url = URL.createObjectURL(blob);
   const {panel,frame,bar,action} = viewer(filename);
-  frame.src = url;
+  // Ask native PDF viewers to fit the entire page width on mobile. Browsers that
+  // ignore PDF fragments can still use Download PDF to open their own viewer.
+  frame.src = url + "#view=FitH&zoom=page-width&toolbar=1";
   action("Print",() => frame.contentWindow.print());
   const link = document.createElement("a");
   link.textContent = "Download PDF";
