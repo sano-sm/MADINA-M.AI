@@ -6,7 +6,7 @@ import { useI18n } from "@/context/I18nContext";
 import { useSettings } from "@/context/SettingsContext";
 import { PageHeader, Btn, Modal, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { ChevronLeft, Download, Eye, FilePlus, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
+import { Archive, ChevronLeft, Download, Eye, FilePlus, Folder, FolderOpen, LockKeyhole, UnlockKeyhole } from "lucide-react";
 
 export default function OwnerTools() {
   const navigate = useNavigate();
@@ -72,28 +72,23 @@ export default function OwnerTools() {
   return <div>
     <PageHeader title={t("owner_tools")} />
 
-    {!openFolder && <div className="mb-5 grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
-      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface w-full max-w-[220px] rounded-lg border border-[var(--gold)]/30 p-3 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70">
-        <div className="flex items-center gap-2"><Folder className="h-6 w-6 shrink-0 text-[var(--gold)]" /><div><div className="font-head text-sm font-bold text-white">Special Years</div><div className="mt-0.5 text-[11px] text-muted-foreground">{years.length} accounting years</div></div></div>
-      </button>
-      <button type="button" onClick={() => setOpenFolder("invoices")} className="card-surface w-full max-w-[220px] rounded-lg border border-border p-3 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
-        <div className="flex items-center gap-2"><Folder className="h-6 w-6 shrink-0 text-[var(--gold)]" /><div><div className="font-head text-sm font-bold text-white">Invoices</div><div className="mt-0.5 text-[11px] text-muted-foreground">Invoice folders</div></div></div>
-      </button>
-      <button type="button" onClick={() => setOpenFolder("years")} className="card-surface w-full max-w-[220px] rounded-lg border border-border p-3 text-start transition hover:-translate-y-0.5 hover:border-[var(--gold)]/60">
-        <div className="flex items-center gap-2"><Folder className="h-6 w-6 shrink-0 text-[var(--gold)]" /><div><div className="font-head text-sm font-bold text-white">Fiscal Years</div><div className="mt-0.5 text-[11px] text-muted-foreground">Close and snapshots</div></div></div>
-      </button>
+    {!openFolder && <div className="mb-5 grid max-w-md grid-cols-2 gap-4">
+      <OwnerFolderButton icon={<Folder className="h-8 w-8" />} title="Special Years" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} gold />
+      <OwnerFolderButton icon={<Folder className="h-8 w-8" />} title="Invoices" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
+      <OwnerFolderButton icon={<LockKeyhole className="h-8 w-8" />} title="Close Year" detail="Close / reopen" onClick={() => setOpenFolder("close")} />
+      <OwnerFolderButton icon={<Archive className="h-8 w-8" />} title="Full Backup ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} />
     </div>}
 
-    {openFolder === "years" && <section className="card-surface mb-5 rounded-sm p-5">
+    {(openFolder === "years" || openFolder === "close") && <section className="card-surface mb-5 rounded-sm p-5">
       <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
-      <div className="mb-4 flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">Special Years</h2><p className="text-xs text-muted-foreground">Select a year to open its accounting summary.</p></div></div>
+      <div className="mb-4 flex items-center gap-2"><FolderOpen className="gold-text" /><div><h2 className="font-head text-lg font-bold text-white">{openFolder === "close" ? "Close Year" : "Special Years"}</h2><p className="text-xs text-muted-foreground">{openFolder === "close" ? "Close, reopen, or view a fiscal-year snapshot." : "Select a year to open its accounting summary."}</p></div></div>
       <div className="grid max-w-4xl grid-cols-3 gap-4">
         {years.map((y) => <div key={y.fiscal_year_start} className="rounded-xl border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
           <button type="button" onClick={() => openYear(y)} className="flex min-h-20 w-full flex-col items-center justify-center rounded-lg text-center hover:bg-[var(--gold)]/10"><div className="font-head text-xl font-bold tracking-wide text-white">{y.fiscal_year_start}</div><div className="mt-1 text-[11px] text-muted-foreground">{y.label}</div><Badge tone={y.closed ? "green" : "gold"}>{y.closed ? t("year_closed") : t("year_open")}</Badge></button>
-          <div className="mt-2 flex justify-center gap-1 border-t border-border pt-2">
+          {openFolder === "close" && <div className="mt-2 flex justify-center gap-1 border-t border-border pt-2">
             {y.snapshot_at && <Btn variant="ghost" onClick={() => viewSnapshot(y)}><Eye size={13} /></Btn>}
             {y.closed ? <Btn variant="dark" onClick={() => reopenYear(y)}><UnlockKeyhole size={13} /></Btn> : <Btn onClick={() => closeYear(y)}><LockKeyhole size={13} /></Btn>}
-          </div>
+          </div>}
         </div>)}
       </div>
       <p className="mt-4 text-xs text-muted-foreground">{t("fiscal_snapshot_hint")}</p>
@@ -111,18 +106,17 @@ export default function OwnerTools() {
       </div>
     </section>}
 
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section className="card-surface rounded-sm p-5">
-        <div className="mb-4 flex items-center gap-2"><Download className="gold-text" /><h2 className="font-head text-lg font-bold text-white">{t("full_backup_zip")}</h2></div>
-        <p className="mb-4 text-sm text-muted-foreground">{t("full_backup_zip_hint")}</p>
-        <div className="flex flex-wrap gap-2">
-          <label className="w-full"><input type="checkbox" checked={both} onChange={e => { setBoth(e.target.checked); setOwnerPassword(""); }} /> Both companies · MTC + TSK</label>
-          {both && <input type="password" autoComplete="current-password" className="rounded p-2 text-black" placeholder="Owner password" value={ownerPassword} onChange={e => setOwnerPassword(e.target.value)} />}
-          <Btn disabled={busy} onClick={backup}><Download size={16} />{busy ? t("preparing") : t("full_backup_zip")}</Btn>
-          <Btn disabled={busy} variant="dark" onClick={downloadPdf}><Download size={16} />{busy ? t("preparing") : "Download PDF Report"}</Btn>
-        </div><Restore />
-      </section>
-    </div>
+    {openFolder === "backup" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
+      <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
+      <div className="mb-4 flex items-center gap-2"><Archive className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Full Backup ZIP</h2></div>
+      <p className="mb-4 text-sm text-muted-foreground">{t("full_backup_zip_hint")}</p>
+      <div className="flex flex-wrap gap-2">
+        <label className="w-full"><input type="checkbox" checked={both} onChange={e => { setBoth(e.target.checked); setOwnerPassword(""); }} /> Both companies · MTC + TSK</label>
+        {both && <input type="password" autoComplete="current-password" className="rounded p-2 text-black" placeholder="Owner password" value={ownerPassword} onChange={e => setOwnerPassword(e.target.value)} />}
+        <Btn disabled={busy} onClick={backup}><Download size={16} />{busy ? t("preparing") : t("full_backup_zip")}</Btn>
+        <Btn disabled={busy} variant="dark" onClick={downloadPdf}><Download size={16} />{busy ? t("preparing") : "Download PDF Report"}</Btn>
+      </div><Restore />
+    </section>}
 
     <Modal open={!!snapshot} onClose={() => setSnapshot(null)} title={snapshot?.label || t("view_snapshot")} wide>
       {snapshot && <div>
@@ -144,6 +138,11 @@ export default function OwnerTools() {
 
 function Snap({ label, value }) { return <div className="rounded-sm bg-white/5 p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-bold gold-text">{value}</div></div>; }
 function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold text-white">{title}</h3><div className="max-h-56 space-y-1 overflow-auto text-xs text-muted-foreground">{rows.length ? rows.map((x, i) => <div key={i} className="border-b border-border py-1">{x}</div>) : <div>—</div>}</div></div>; }
+function OwnerFolderButton({ icon, title, detail, onClick, gold=false }) {
+  return <button type="button" onClick={onClick} className={`card-surface flex min-h-28 w-full max-w-[170px] flex-col items-center justify-center rounded-xl border p-3 text-center transition hover:-translate-y-0.5 hover:border-[var(--gold)]/70 ${gold ? "border-[var(--gold)]/40" : "border-border"}`}>
+    <span className={gold ? "gold-text" : "text-muted-foreground"}>{icon}</span><span className="mt-1 font-head text-xs font-bold text-white">{title}</span><span className="mt-0.5 text-[10px] text-muted-foreground">{detail}</span>
+  </button>;
+}
 function InvoiceFolderCard({ icon, title, description }) {
   return <div className="rounded-lg border border-border bg-white/[0.03] p-3 transition hover:border-[var(--gold)]/60">
     <div className="flex items-center gap-2"><div className="rounded-md bg-[var(--gold)]/10 p-1.5 text-[var(--gold)]">{icon}</div><div className="min-w-0"><div className="font-head text-sm font-bold text-white">{title}</div><div className="mt-0.5 text-[11px] text-muted-foreground">{description}</div></div></div>
