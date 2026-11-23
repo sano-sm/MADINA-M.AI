@@ -302,7 +302,32 @@ html[data-madina-theme="royal"] [style*="linear-gradient(155deg,#1c1c1f"] { back
 .ct-folder-panel--c .ct-design-card { border-radius:18px 18px 20px 20px; border-width:3px; box-shadow:inset 0 0 0 2px #f7cb6b24,0 6px 12px #0005; }
 .ct-folder-panel--c .ct-design-card--active { box-shadow:0 0 0 2px var(--ct-accent),0 0 20px #e2b55785; }
 @media(max-width:850px) { .ct-folder-grid { gap:9px; } .ct-design-card { gap:8px;padding:12px 9px;min-height:104px; } .ct-design-arrow svg { width:18px;height:18px; } }
-@media(max-width:560px) { .ct-folder-panel { padding:13px 10px 15px;border-radius:16px; } .ct-folder-grid { grid-template-columns:1fr;gap:10px; } .ct-design-card { min-height:91px;gap:14px;padding:12px 15px; } .ct-design-art { width:64px;height:64px; } .ct-design-title { font-size:18px; } .ct-design-caption { font-size:12px; } .ct-design-arrow svg { width:23px;height:23px; } }
+@media(max-width:560px) {
+  /* Keep the three illustrated A/B/C archive folders side-by-side on phones. */
+  .ct-folder-panel { padding:12px 8px 15px;border-radius:16px; }
+  .ct-folder-panel-heading { gap:7px;margin:0 2px 12px;font-size:21px; }
+  .ct-folder-panel-ship { width:29px;height:29px; }
+  .ct-folder-heading-line { margin-left:3px; }
+  .ct-folder-grid { grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
+  .ct-design-card { min-width:0;min-height:128px;gap:4px;padding:9px 4px 8px;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-radius:14px; }
+  .ct-design-art { width:43px;height:43px; }
+  .ct-design-art-mark { font-size:11px;top:1px; }
+  .ct-design-art--income svg,.ct-design-art--bl svg { margin-top:10px; }
+  .ct-design-copy { width:100%;flex:0 0 auto;gap:3px;align-items:center; }
+  .ct-design-title { font-size:clamp(10px,2.9vw,13px);line-height:1.12;overflow-wrap:break-word; }
+  .ct-design-caption { font-size:clamp(8px,2.2vw,10px);line-height:1.15; }
+  .ct-design-arrow { position:absolute;right:4px;top:7px; }
+  .ct-design-arrow svg { width:12px;height:12px; }
+  .ct-folder-panel--b .ct-design-arrow { width:18px;height:18px; }
+  .ct-folder-panel--c .ct-design-card { border-radius:13px;border-width:2px; }
+}
+@media(max-width:360px) {
+  .ct-folder-grid { gap:4px; }
+  .ct-design-card { padding:8px 3px;min-height:121px; }
+  .ct-design-art { width:36px;height:36px; }
+  .ct-design-title { font-size:10px; }
+  .ct-design-caption { font-size:8px; }
+}
 
 /* Saved document collection: paper thumbnails matching the existing Saved Invoices visual. */
 .ct-saved-panel { background:linear-gradient(135deg,#27394e,#1a293c);border:1px solid #4c627a;border-radius:13px;padding:20px 22px 24px;box-shadow:0 10px 25px #0003; }
