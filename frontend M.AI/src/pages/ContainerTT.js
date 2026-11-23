@@ -1,3 +1,4 @@
+import FolderArtwork from "@/components/FolderArtwork";
 import { printWindow } from "@/lib/documentPreview";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { api, apiError } from "@/lib/api";
@@ -52,10 +53,8 @@ export default function ContainerTT() {
               data-testid={`ct-folder-${item.key}`}
               aria-pressed={folder === item.key}
               className={`ct-design-card ct-design-card--${folderDesign} ${folder === item.key ? "ct-design-card--active" : ""}`}>
-              <span className={`ct-design-art ct-design-art--${item.key}`}>
-                <item.icon aria-hidden="true" strokeWidth={1.65} />
-                {item.key === "income" && <span className="ct-design-art-mark">TT</span>}
-                {item.key === "bl" && <span className="ct-design-art-mark">BL</span>}
+              <span className={`ct-design-art ct-design-art--${item.key} ct-design-art--illustrated`}>
+                <FolderArtwork kind={item.key} design={folderDesign} />
               </span>
               <span className="ct-design-copy">
                 <span className="ct-design-title">{item.label}</span>
