@@ -78,11 +78,13 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
   const {settings}=useSettings();
   const [mode,setMode]=useState(""),[seller,setSeller]=useState({name:""}),[rows,setRows]=useState([]),[busy,setBusy]=useState(false);
   const [autoParts,setAutoParts]=useState(null);
+  const [nextAutoNumber,setNextAutoNumber]=useState("");
   const [q,setQ]=useState(""),[sortBy,setSortBy]=useState("date"),[docs,setDocs]=useState([]),[selected,setSelected]=useState([]),[archiveCount,setArchiveCount]=useState(0);const requestId=useRef(""),lock=useRef(false),pressTimer=useRef(null),suppressClick=useRef(false);
+  useEffect(()=>{if(mode!=="auto")return;let active=true;api.get("/paper/auto-parts/next-number").then(r=>{if(active)setNextAutoNumber(r.data.number||"");}).catch(()=>{});return()=>{active=false;};},[mode]);
   useEffect(()=>{let active=true;api.get("/paper/archive",{params:{kind:invoiceKind==="custom"?"custom":"standard"}}).then(r=>{if(active)setArchiveCount(r.data.length);}).catch(()=>{});return()=>{active=false;};},[invoiceKind,mode]);
   useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q,kind:invoiceKind==="custom"?"custom":"standard",sort:sortBy}}).then(r=>{if(current){setDocs(r.data);setSelected([]);}}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q,invoiceKind,sortBy]);
   useEffect(()=>{const id=new URLSearchParams(window.location.search).get("record");if(id)readDocument(id).catch(failed);},[]);
-  function start(){requestId.current=crypto.randomUUID();if(invoiceKind==="custom"){setAutoParts({loading_date:today(),engines:Array.from({length:60},()=>({number:"",price:""})),chassis:Array.from({length:12},()=>({number:"",price:""})),parts:Array.from({length:40},()=>({number:"",price:""}))});setMode("auto");return;}setSeller({name:""});setRows([newRow()]);setMode("manual");}
+  function start(){requestId.current=crypto.randomUUID();if(invoiceKind==="custom"){setNextAutoNumber("");setAutoParts({loading_date:today(),engines:Array.from({length:60},()=>({number:"",price:""})),chassis:Array.from({length:12},()=>({number:"",price:""})),parts:Array.from({length:40},()=>({number:"",price:""}))});setMode("auto");return;}setSeller({name:""});setRows([newRow()]);setMode("manual");}
   async function save(){
     if(lock.current)return;lock.current=true;setBusy(true);
     try{const {data}=await api.post("/paper",{kind:invoiceKind,request_id:requestId.current,seller,rows});await readDocument(data.id);setMode("");}catch(e){failed(e);}finally{lock.current=false;setBusy(false);}
@@ -120,7 +122,7 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
       </button>
     </> : <><Btn onClick={start}>{invoiceKind==="custom"?"Custom Invoice":"Purchase Invoice"}</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
     <Modal open={mode==="auto"} onClose={()=>setMode("")} title="New Auto Parts Invoice" wide>
-      {autoParts && <AutoPartsEditor value={autoParts} onChange={v=>{setAutoParts(v);requestId.current=crypto.randomUUID();}} company={settings} busy={busy} onSave={saveAutoParts}/>}
+      {autoParts && <AutoPartsEditor value={autoParts} onChange={v=>{setAutoParts(v);requestId.current=crypto.randomUUID();}} company={settings} invoiceNumber={nextAutoNumber} busy={busy} onSave={saveAutoParts}/>}
     </Modal>
     <Modal open={mode==="manual"} onClose={()=>setMode("")} title={invoiceKind==="custom"?"New Custom Invoice":"New Purchase Invoice"} wide>
       <p className="my-2">To · {settings?.name} · {settings?.address} · {settings?.phone}</p>
@@ -161,7 +163,7 @@ export function Restore(){
     {info&&<div className="my-2"><b>{info.company} · {info.date}</b><label className="my-2 block"><input type="checkbox" checked={copy} onChange={e=>setCopy(e.target.checked)}/> Create a separate recovery database</label><details><summary>Record counts</summary>{Object.entries(info.counts).map(([k,n])=><div key={k}>{k}: {n}</div>)}</details><Btn disabled={busy} onClick={()=>submit(true)}>{copy?"Create recovery copy":"Restore to empty test database"}</Btn></div>}{result&&<p className="my-2">Restored {result.company} · {result.database || "Current test database"}</p>}</div>;
 }
 
-function AutoPartsEditor({value,onChange,company,busy,onSave}) {
+function AutoPartsEditor({value,onChange,company,invoiceNumber,busy,onSave}) {
   const setLine=(type,index,key,val)=>onChange({...value,[type]:value[type].map((r,i)=>i===index?{...r,[key]:val}:r)});
   const sum=["engines","chassis","parts"].reduce((n,type)=>n+value[type].reduce((a,r)=>a+Number(r.price||0),0),0);
   const inputClass="w-full min-w-0 border-0 bg-transparent px-1 py-1 text-[11px] text-white outline-none focus:bg-white/10";
@@ -179,7 +181,7 @@ function AutoPartsEditor({value,onChange,company,busy,onSave}) {
   return <div dir="ltr" className="text-left">
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--gold)]/50 pb-3">
       <div><h2 className="font-head text-lg font-bold text-white">{company?.name||"MADINA TRADING"}</h2><p className="max-w-xs whitespace-pre-line text-xs text-muted-foreground">{company?.address||"Company address from Settings"}</p></div>
-      <label className="text-xs text-white">Loading Date <input type="date" className="mt-1 block rounded border border-border bg-background p-2 text-white" value={value.loading_date} onChange={e=>onChange({...value,loading_date:e.target.value})}/></label>
+      <div className="flex flex-col items-end gap-2"><div className="text-right text-[10px] leading-tight text-muted-foreground">Invoice No.<div className="mt-0.5 font-head text-xs font-semibold text-white">{invoiceNumber||"Assigned on save"}</div></div><label className="text-xs text-white">Loading Date <input type="date" className="mt-1 block rounded border border-border bg-background p-2 text-white" value={value.loading_date} onChange={e=>onChange({...value,loading_date:e.target.value})}/></label></div>
     </div>
     <div className="mt-2 text-right text-sm font-bold text-white">Grand Total: {money(sum)}</div>
     {Array.from({length:value.engines.length/60},(_,page)=>list("ENGINE LIST — Sheet "+(page+1),"engines",page*60,30))}
