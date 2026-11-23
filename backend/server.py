@@ -4129,9 +4129,15 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
         {"status": "in_stock"},
         {"status": "dismantled", "recovery_status": {"$ne": "completed"}},
     ]}, {"_id": 0}).to_list(10000)
+    close_date = now_iso()[:10]
+    period_start = f"{fiscal_year_start:04d}-{_fiscal_start_month(current_company.get()):02d}-01"
+    period_profit = await compute_pnl(period_start, close_date)
+    closing_stock = await compute_stock_valuation()
     return {
         "company": current_company.get(), "fiscal_year_start": fiscal_year_start,
         "label": _period_label(fiscal_year_start), "snapshot_at": now_iso(),
+        "close_date": close_date, "period_start": period_start,
+        "profit_summary": period_profit, "closing_stock": closing_stock,
         "funds": await funds_summary(), "customers": customers,
         "brokers": brokers, "loans": loans, "active_vehicles": active_vehicles,
     }
