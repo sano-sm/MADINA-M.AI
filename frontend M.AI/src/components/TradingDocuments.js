@@ -77,7 +77,8 @@ export function IssuePanel({kind,party,fullReport}) {
 export function OwnerDocuments({compact=false, invoiceKind="manual"}){
   const {settings}=useSettings();
   const [mode,setMode]=useState(""),[seller,setSeller]=useState({name:""}),[rows,setRows]=useState([]),[busy,setBusy]=useState(false);
-  const [q,setQ]=useState(""),[sortBy,setSortBy]=useState("date"),[docs,setDocs]=useState([]),[selected,setSelected]=useState([]);const requestId=useRef(""),lock=useRef(false),pressTimer=useRef(null),suppressClick=useRef(false);
+  const [q,setQ]=useState(""),[sortBy,setSortBy]=useState("date"),[docs,setDocs]=useState([]),[selected,setSelected]=useState([]),[archiveCount,setArchiveCount]=useState(0);const requestId=useRef(""),lock=useRef(false),pressTimer=useRef(null),suppressClick=useRef(false);
+  useEffect(()=>{let active=true;api.get("/paper/archive",{params:{kind:invoiceKind==="custom"?"custom":"standard"}}).then(r=>{if(active)setArchiveCount(r.data.length);}).catch(()=>{});return()=>{active=false;};},[invoiceKind,mode]);
   useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q,kind:invoiceKind==="custom"?"custom":"standard",sort:sortBy}}).then(r=>{if(current){setDocs(r.data);setSelected([]);}}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q,invoiceKind,sortBy]);
   useEffect(()=>{const id=new URLSearchParams(window.location.search).get("record");if(id)readDocument(id).catch(failed);},[]);
   function start(){setSeller({name:""});setRows([newRow()]);requestId.current=crypto.randomUUID();setMode("manual");}
@@ -95,11 +96,17 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
   }
   const total=rows.reduce((n,r)=>n+Number(r.gross||0),0),net=Math.round(total*10/11);
   const newActionCard = "group flex h-[56px] w-[96px] items-center justify-center rounded-lg border border-[var(--gold)]/35 bg-white/[0.025] px-1.5 text-center transition hover:border-[var(--gold)]/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
-  const savedActionCard = "group relative mt-2 flex h-[77px] w-[100px] flex-col items-center justify-center rounded-md rounded-tl-sm border border-[var(--gold)]/45 bg-gradient-to-br from-[#7c663a]/65 via-[#493c28]/70 to-[#292820]/85 px-1.5 pt-2 text-center shadow-[0_4px_10px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:border-[var(--gold)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
+  const savedActionCard = "group relative mt-2 h-[79px] w-[101px] cursor-pointer border-0 bg-transparent p-0 text-center transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
   return <div className={compact ? "grid justify-items-center gap-4" : "mb-4 flex flex-wrap gap-2"}>
     {compact ? <>
       <button type="button" onClick={start} className={newActionCard}><span className="flex flex-col items-start leading-none"><span className="text-[8px] font-light tracking-normal text-muted-foreground">{invoiceKind==="custom"?"Custom":"Purchase"}</span><span className="mt-1 font-head text-[11px] font-semibold tracking-normal text-white">INVOICE</span></span><span className={`${invoiceKind==="custom"?"order-first mr-1":"ml-1"} self-center text-[var(--gold)]`}><FilePenLine size={15} strokeWidth={1.25} /></span></button>
-      <button type="button" onClick={()=>setMode("archive")} className={savedActionCard}><span aria-hidden="true" className="absolute -top-[7px] left-0 h-[9px] w-11 rounded-t-md border border-b-0 border-[var(--gold)]/45 bg-[#7c663a]" /><span className="block font-head text-[10px] font-semibold leading-tight text-white">{invoiceKind==="custom"?"Saved Custom":"Saved"}</span><span className="mt-0.5 block font-head text-[11px] font-bold leading-tight text-white">Invoices</span><span className="mt-1 text-[8px] tracking-wide text-[#e0c994]">PDF FILES</span></button>
+      <button type="button" onClick={()=>setMode("archive")} aria-label={invoiceKind==="custom"?"Open saved custom invoices":"Open saved purchase invoices"} className={savedActionCard}>
+        <span aria-hidden="true" className="absolute inset-x-[3px] bottom-[5px] top-[13px] rounded-[8px] border border-[#b89754] bg-gradient-to-b from-[#806a3b] to-[#4a3820] shadow-[0_4px_10px_rgba(0,0,0,0.25)]" />
+        <span aria-hidden="true" className="absolute left-[5px] top-[7px] h-[16px] w-[43px] rounded-t-[5px] border border-b-0 border-[#d1ae65] bg-[#806a3b]" />
+        {archiveCount>0 && <span aria-hidden="true" className="absolute left-[20px] right-[17px] top-[14px] h-[34px] -rotate-[3deg] rounded-[3px] border border-slate-300 bg-white shadow-sm"><span className="absolute left-2 top-2 h-[2px] w-8 bg-slate-300"/><span className="absolute left-2 top-4 h-[2px] w-6 bg-slate-200"/><span className="absolute right-1 top-1 text-[7px] font-bold text-red-600">PDF</span></span>}
+        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[30px] rounded-b-[9px] rounded-t-[5px] border border-[#d8b875] bg-gradient-to-b from-[#c5a45c] via-[#a58243] to-[#75552b] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_10px_rgba(0,0,0,0.18)]" />
+        <span className="absolute inset-x-1 bottom-[9px] flex flex-col items-center leading-tight text-[#241b11]"><span className="font-head text-[10px] font-semibold">{invoiceKind==="custom"?"Saved Custom":"Saved"}</span><span className="font-head text-[11px] font-bold">Invoices</span></span>
+      </button>
     </> : <><Btn onClick={start}>{invoiceKind==="custom"?"Custom Invoice":"Purchase Invoice"}</Btn><Btn variant="dark" onClick={()=>setMode("archive")}>Saved Invoices</Btn></>}
     <Modal open={mode==="manual"} onClose={()=>setMode("")} title={invoiceKind==="custom"?"New Custom Invoice":"New Purchase Invoice"} wide>
       <p className="my-2">To · {settings?.name} · {settings?.address} · {settings?.phone}</p>
