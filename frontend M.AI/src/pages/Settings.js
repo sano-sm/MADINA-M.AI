@@ -200,6 +200,18 @@ function SecurityTab({ t, manage }) {
   const [pin, setP] = useState("");
   const [confirm, setC] = useState("");
   const [saving, setSaving] = useState(false);
+  const [ownerPin, setOwnerPin] = useState("");
+  const [ownerConfirm, setOwnerConfirm] = useState("");
+  const [ownerSaving, setOwnerSaving] = useState(false);
+  const [ownerPinSet, setOwnerPinSet] = useState(false);
+  useEffect(() => { api.get("/owner/pin/status").then(r => setOwnerPinSet(!!r.data?.pin_set)).catch(() => {}); }, []);
+  const saveOwnerPin = async () => {
+    if (!/^\\d{4}$/.test(ownerPin)) return toast.error("Owner PIN must be exactly 4 digits");
+    if (ownerPin !== ownerConfirm) return toast.error("Owner PINs do not match");
+    setOwnerSaving(true);
+    try { await api.post("/owner/pin/set", {pin: ownerPin}); setOwnerPinSet(true); setOwnerPin(""); setOwnerConfirm(""); toast.success("Owner PIN saved"); }
+    catch(e) { toast.error(apiError(e)); } finally { setOwnerSaving(false); }
+  };
   const save = async () => {
     if (!/^\d{4}$/.test(pin)) return toast.error(t("pin_rule"));
     if (pin !== confirm) return toast.error(t("pin_mismatch"));
@@ -209,12 +221,21 @@ function SecurityTab({ t, manage }) {
   };
   if (!manage) return <div className="text-sm text-muted-foreground">{t("no_permission")}</div>;
   return (
-    <div className="card-surface max-w-md space-y-4 rounded-sm p-5">
+    <div className="max-w-md space-y-5"><div className="card-surface space-y-4 rounded-sm p-5">
       <div className="flex items-center gap-2"><Lock size={16} className="gold-text" /><span className="font-head font-bold gold-text">{t("app_pin")}</span></div>
       <p className="text-sm text-muted-foreground">{t("change_pin_hint")}</p>
       <Field label={t("new_pin")}><Input data-testid="set-new-pin" type="password" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setP(e.target.value.replace(/\D/g, ""))} /></Field>
       <Field label={t("confirm_pin")}><Input data-testid="set-confirm-pin" type="password" inputMode="numeric" maxLength={4} value={confirm} onChange={(e) => setC(e.target.value.replace(/\D/g, ""))} /></Field>
       <div className="flex justify-end"><Btn data-testid="save-pin-btn" disabled={saving} onClick={save}>{t("change_pin")}</Btn></div>
+    </div>
+    <div className="card-surface space-y-4 rounded-sm p-5">
+      <div className="flex items-center gap-2"><Lock size={16} className="gold-text" /><span className="font-head font-bold gold-text">Owner PIN</span></div>
+      <p className="text-sm text-muted-foreground">Independent 4-digit Owner PIN. You may use the same digits as App PIN or different digits.</p>
+      <p className="text-xs text-muted-foreground">{ownerPinSet ? "Owner PIN configured" : "Owner PIN not yet configured"}</p>
+      <Field label="New Owner PIN"><Input data-testid="set-owner-pin" type="password" inputMode="numeric" maxLength={4} value={ownerPin} onChange={e => setOwnerPin(e.target.value.replace(/\\D/g, ""))} /></Field>
+      <Field label="Confirm Owner PIN"><Input data-testid="confirm-owner-pin" type="password" inputMode="numeric" maxLength={4} value={ownerConfirm} onChange={e => setOwnerConfirm(e.target.value.replace(/\\D/g, ""))} /></Field>
+      <div className="flex justify-end"><Btn data-testid="save-owner-pin" disabled={ownerSaving} onClick={saveOwnerPin}>{ownerPinSet ? "Change Owner PIN" : "Set Owner PIN"}</Btn></div>
+    </div>
     </div>
   );
 }
