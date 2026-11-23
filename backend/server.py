@@ -4132,7 +4132,6 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
     return {
         "company": current_company.get(), "fiscal_year_start": fiscal_year_start,
         "label": _period_label(fiscal_year_start), "snapshot_at": now_iso(),
-        "profit_summary": await compute_pnl(),
         "funds": await funds_summary(), "customers": customers,
         "brokers": brokers, "loans": loans, "active_vehicles": active_vehicles,
     }
