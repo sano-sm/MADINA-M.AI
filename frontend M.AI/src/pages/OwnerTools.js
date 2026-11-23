@@ -78,7 +78,7 @@ export default function OwnerTools() {
   };
 
   return <div>
-    <PageHeader title={t("owner_tools")} />
+    <PageHeader title="OWNER TOOLS" />
 
     {!openFolder && <div className="mb-5 grid w-full max-w-[460px] grid-cols-2 justify-items-center gap-x-8 gap-y-8 px-1 sm:gap-x-12">
       <OwnerDesktopFolder title="Year Archives" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
@@ -207,14 +207,10 @@ function Snap({ label, value }) { return <div className="rounded-sm bg-white/5 p
 function List({ title, rows }) { return <div><h3 className="mb-2 font-semibold text-white">{title}</h3><div className="max-h-56 space-y-1 overflow-auto text-xs text-muted-foreground">{rows.length ? rows.map((x, i) => <div key={i} className="border-b border-border py-1">{x}</div>) : <div>—</div>}</div></div>; }
 function OwnerDesktopFolder({ title, detail, onClick, small=false }) {
   return <button type="button" onClick={onClick} aria-label={title} title={detail}
-    className={`group relative block shrink-0 cursor-pointer border-0 bg-transparent p-0 text-center transition hover:-translate-y-0.5 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)] ${small ? "h-[80px] w-[98px]" : "h-[88px] w-[110px]"}`}>
-    <span aria-hidden="true" className="absolute inset-x-[3px] bottom-[5px] top-[13px] rounded-[8px] border border-[#b89754] bg-gradient-to-b from-[#806a3b] to-[#4a3820] shadow-[0_4px_10px_rgba(0,0,0,0.25)]" />
-    <span aria-hidden="true" className="absolute left-[5px] top-[7px] h-[16px] w-[43px] rounded-t-[5px] border border-b-0 border-[#d1ae65] bg-[#806a3b]" />
-    <span aria-hidden="true" className="absolute left-[20%] right-[17%] top-[16px] h-[36%] -rotate-[3deg] rounded-[3px] border border-slate-300 bg-white shadow-sm">
-      <span className="absolute left-[15%] top-[30%] h-[2px] w-[58%] bg-slate-300" />
-      <span className="absolute left-[15%] top-[53%] h-[2px] w-[45%] bg-slate-200" />
-    </span>
-    <span aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[32px] rounded-b-[9px] rounded-t-[5px] border border-[#d8b875] bg-gradient-to-b from-[#c5a45c] via-[#a58243] to-[#75552b] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_10px_rgba(0,0,0,0.18)]" />
-    <span className={`absolute inset-x-1 bottom-[13px] flex items-center justify-center font-head font-bold leading-tight text-[#241b11] ${small ? "text-[11px]" : "text-[14px]"}`}>{title}</span>
+    className={`group relative flex h-[102px] w-[148px] flex-col items-center justify-center overflow-hidden rounded-[20px] border border-[#e6c477] bg-gradient-to-br from-[#f1d78f] via-[#b78b43] to-[#765024] px-3 text-center shadow-[0_5px_0_#4a331b,0_10px_24px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-1 hover:border-[#ffe6a5] hover:shadow-[0_7px_0_#4a331b,0_14px_28px_rgba(0,0,0,0.4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e9bd5e] active:translate-y-0 sm:h-[112px] sm:w-[166px] ${small ? "opacity-100" : ""}`}>
+    <span aria-hidden="true" className="pointer-events-none absolute inset-[4px] rounded-[16px] border border-white/35" />
+    <span aria-hidden="true" className="pointer-events-none absolute -left-10 -top-16 h-32 w-28 rotate-45 bg-white/20 blur-xl" />
+    <span className="relative z-10 font-head text-[15px] font-extrabold leading-snug tracking-wide text-[#21180c] drop-shadow-[0_1px_0_rgba(255,255,255,0.4)] sm:text-[17px]">{title}</span>
+    <span aria-hidden="true" className="relative z-10 mt-2 h-[2px] w-10 rounded-full bg-[#493016]/60" />
   </button>;
 }
