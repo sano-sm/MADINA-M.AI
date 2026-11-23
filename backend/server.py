@@ -4498,6 +4498,15 @@ class AutoPartsRequest(BaseModel):
     parts: List[AutoPartsLine] = Field(default_factory=list, max_length=40)
 
 
+@api.get("/paper/auto-parts/next-number")
+async def auto_parts_next_number(user: dict = Depends(require("settings.manage"))):
+    cid = current_company.get()
+    counter = await db.settings.find_one({"id": settings_id(), "company_id": cid}, {"paper_invoice_seq": 1})
+    seq = int((counter or {}).get("paper_invoice_seq", 0)) + 1
+    year = datetime.now(timezone(timedelta(hours=9))).strftime("%y")
+    return {"number": f"{cid}{year}-{seq:03d}"}
+
+
 @api.post("/paper/auto-parts")
 async def issue_auto_parts_invoice(body: AutoPartsRequest, user: dict = Depends(require("settings.manage"))):
     cid = current_company.get()
