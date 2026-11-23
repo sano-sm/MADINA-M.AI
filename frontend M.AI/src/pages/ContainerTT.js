@@ -48,10 +48,10 @@ export default function ContainerTT() {
             { key: "income", label: "TT Invoices", caption: folderDesign === "b" ? "TT Invoice List" : "All TT Receipts", icon: FileCheck2 },
             { key: "bl", label: "BL Amount", caption: folderDesign === "b" ? "BL Invoice List" : "All BL Records", icon: Ship },
           ].map((item) => (
-            <button type="button" key={item.key} onClick={() => { setTab(item.key); setFolder(item.key); }}
+            <button type="button" key={item.key} onClick={() => { setFolder(item.key); }}
               data-testid={`ct-folder-${item.key}`}
-              aria-pressed={tab === item.key}
-              className={`ct-design-card ct-design-card--${folderDesign} ${tab === item.key ? "ct-design-card--active" : ""}`}>
+              aria-pressed={folder === item.key}
+              className={`ct-design-card ct-design-card--${folderDesign} ${folder === item.key ? "ct-design-card--active" : ""}`}>
               <span className={`ct-design-art ct-design-art--${item.key}`}>
                 <item.icon aria-hidden="true" strokeWidth={1.65} />
                 {item.key === "income" && <span className="ct-design-art-mark">TT</span>}
@@ -71,14 +71,15 @@ export default function ContainerTT() {
       {folder && (
         <div className="mb-4 flex items-center gap-3">
           <button type="button" onClick={() => setFolder(null)} className="rounded-md border border-[var(--gold)] px-4 py-2 font-semibold text-[var(--gold)] hover:bg-white/10">
-            ← Back to {tab === "invoices" ? "Container Invoice" : tab === "income" ? "Income TT" : "BL Amount"}
+            ← Close Folder
           </button>
           <span className="font-semibold gold-text">{folder === "invoices" ? "Container Invoice Folder" : folder === "income" ? "TT PDF Folder" : "BL PDF Folder"}</span>
         </div>
       )}
       {folder === "income" && <DocumentArchiveFolder kind="tt" />}
       {folder === "bl" && <DocumentArchiveFolder kind="bl" />}
-      {tab === "invoices" && <InvoicesSection folderOpen={folder === "invoices"} onOpenFolder={() => setFolder("invoices")} />}
+      {folder === "invoices" && <InvoicesSection mode="folder" />}
+      {tab === "invoices" && !folder && <InvoicesSection mode="editor" />}
       {tab === "income" && !folder && <IncomeSection />}
       {tab === "bl" && !folder && <BLAmountSection />}
       {tab === "monthly" && <MonthlySummarySection />}
@@ -137,7 +138,8 @@ function DocumentArchiveFolder({ kind }) {
 }
 
 /* ------------------------- Container Invoices ------------------------- */
-function InvoicesSection({ folderOpen, onOpenFolder }) {
+function InvoicesSection({ mode }) {
+  const folderOpen = mode === "folder";
   const { t } = useI18n();
   const { can } = useAuth();
   const editable = can("finance.edit");
@@ -162,7 +164,6 @@ function InvoicesSection({ folderOpen, onOpenFolder }) {
     try {
       const { data } = await api.post("/container-invoices", { company_name: "", page_count: 1, items: [] });
       await load();
-      onOpenFolder();
       openInvoice(data.id);
       toast.success(t("save"));
     } catch (e) { toast.error(apiError(e)); }
@@ -179,7 +180,7 @@ function InvoicesSection({ folderOpen, onOpenFolder }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        {editable && <Btn data-testid="new-container-invoice-btn" onClick={createNew}><Plus size={16} />{t("new_container_invoice")}</Btn>}
+        {!folderOpen && editable && <Btn data-testid="new-container-invoice-btn" onClick={createNew}><Plus size={16} />{t("new_container_invoice")}</Btn>}
         {folderOpen && <Input data-testid="ci-search" value={q} onChange={(e) => setQ(e.target.value)}
           placeholder={t("search_container")} className="max-w-xs" />}
       </div>
@@ -197,7 +198,7 @@ function InvoicesSection({ folderOpen, onOpenFolder }) {
         {!filtered.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
       </div>
 
-      {folderOpen && detail ? (
+      {detail ? (
         <InvoiceSheet key={detail.id} detail={detail} editable={editable}
           onSaved={() => load()} onDeleted={() => { setDetail(null); setSelId(null); load(); }} />
       ) : folderOpen ? (
