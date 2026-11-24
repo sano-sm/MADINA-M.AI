@@ -40,8 +40,8 @@ function Scrap({ t }) {
     <div>
       {can("finance.edit") && (
         <div className="mb-4 flex flex-wrap items-end gap-3 card-surface rounded-sm p-4">
-          <div className="w-40"><Field label={t("scrap_month")}><Input type="month" data-testid="scrap-month" value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} /></Field></div>
-          <div className="w-40"><Field label={t("total_amount")}><Input type="number" data-testid="scrap-total" value={form.total_amount} onChange={(e) => setForm({ ...form, total_amount: e.target.value })} /></Field></div>
+          <div className="w-full min-w-0 sm:w-44"><Field label={t("scrap_month")}><Input type="month" data-testid="scrap-month" value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} /></Field></div>
+          <div className="w-full min-w-0 sm:w-40"><Field label={t("total_amount")}><Input type="number" data-testid="scrap-total" value={form.total_amount} onChange={(e) => setForm({ ...form, total_amount: e.target.value })} /></Field></div>
           <Btn data-testid="scrap-allocate" onClick={create}>{t("allocate")}</Btn>
         </div>
       )}
@@ -65,8 +65,8 @@ function Shokubai({ t }) {
     <div>
       {can("finance.edit") && (
         <div className="mb-4 flex flex-wrap items-end gap-3 card-surface rounded-sm p-4">
-          <div className="w-44"><Field label={t("cut_off_date")}><Input type="date" data-testid="shok-date" value={form.sale_date} onChange={(e) => setForm({ ...form, sale_date: e.target.value })} /></Field></div>
-          <div className="w-40"><Field label={t("total_amount")}><Input type="number" data-testid="shok-total" value={form.total_amount} onChange={(e) => setForm({ ...form, total_amount: e.target.value })} /></Field></div>
+          <div className="w-full min-w-0 sm:w-44"><Field label={t("cut_off_date")}><Input type="date" data-testid="shok-date" value={form.sale_date} onChange={(e) => setForm({ ...form, sale_date: e.target.value })} /></Field></div>
+          <div className="w-full min-w-0 sm:w-40"><Field label={t("total_amount")}><Input type="number" data-testid="shok-total" value={form.total_amount} onChange={(e) => setForm({ ...form, total_amount: e.target.value })} /></Field></div>
           <Btn data-testid="shok-allocate" onClick={create}>{t("allocate")}</Btn>
         </div>
       )}
