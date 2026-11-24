@@ -116,14 +116,14 @@ export default function ExpensesSalary() {
   return <div>
     <PageHeader title={t("expenses")} />
     <div className="mb-5 grid grid-cols-3 gap-3 sm:max-w-3xl">
-      <button onClick={() => setTab("expenses")} className={`card-surface flex items-center gap-3 rounded-sm border p-4 text-start ${tab === "expenses" ? "border-[var(--gold)]" : "border-border"}`}>
-        <Calculator className="gold-text" /><div><div className="font-bold text-white">{t("expenses")}</div><div className="text-xs text-muted-foreground">{t("business_expenses")}</div></div>
+      <button onClick={() => setTab("expenses")} aria-pressed={tab === "expenses"} style={tab === "expenses" ? { background: "linear-gradient(135deg, #b58a24, #f1d675, #b58a24)", color: "#101827" } : undefined} className={`card-surface flex min-w-0 flex-col items-center gap-1 rounded-sm border p-2 text-center sm:flex-row sm:gap-3 sm:p-4 sm:text-start ${tab === "expenses" ? "border-[var(--gold)] ring-2 ring-inset ring-[var(--gold)]" : "border-border"}`}>
+        <Calculator className="gold-text" /><div><div className="font-bold">{t("expenses")}</div><div className="text-xs opacity-80 break-words">{t("business_expenses")}</div></div>
       </button>
-      <button onClick={() => setTab("salary")} className={`card-surface flex items-center gap-3 rounded-sm border p-4 text-start ${tab === "salary" ? "border-[var(--gold)]" : "border-border"}`}>
-        <Users className="gold-text" /><div><div className="font-bold text-white">{t("salary")}</div><div className="text-xs text-muted-foreground">{t("employee_salary")}</div></div>
+      <button onClick={() => setTab("salary")} aria-pressed={tab === "salary"} style={tab === "salary" ? { background: "linear-gradient(135deg, #b58a24, #f1d675, #b58a24)", color: "#101827" } : undefined} className={`card-surface flex min-w-0 flex-col items-center gap-1 rounded-sm border p-2 text-center sm:flex-row sm:gap-3 sm:p-4 sm:text-start ${tab === "salary" ? "border-[var(--gold)] ring-2 ring-inset ring-[var(--gold)]" : "border-border"}`}>
+        <Users className="gold-text" /><div><div className="font-bold">{t("salary")}</div><div className="text-xs opacity-80 break-words">{t("employee_salary")}</div></div>
       </button>
-      <button onClick={() => setTab("shipping")} className={`card-surface flex items-center gap-3 rounded-sm border p-4 text-start ${tab === "shipping" ? "border-[var(--gold)]" : "border-border"}`}>
-        <Ship className="gold-text" /><div><div className="font-bold text-white">{t("shipping_cost")}</div><div className="text-xs text-muted-foreground">{t("shipping_payments")}</div></div>
+      <button onClick={() => setTab("shipping")} aria-pressed={tab === "shipping"} style={tab === "shipping" ? { background: "linear-gradient(135deg, #b58a24, #f1d675, #b58a24)", color: "#101827" } : undefined} className={`card-surface flex min-w-0 flex-col items-center gap-1 rounded-sm border p-2 text-center sm:flex-row sm:gap-3 sm:p-4 sm:text-start ${tab === "shipping" ? "border-[var(--gold)] ring-2 ring-inset ring-[var(--gold)]" : "border-border"}`}>
+        <Ship className="gold-text" /><div><div className="font-bold">{t("shipping_cost")}</div><div className="text-xs opacity-80 break-words">{t("shipping_payments")}</div></div>
       </button>
     </div>
 
