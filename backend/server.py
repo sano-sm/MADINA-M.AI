@@ -4327,14 +4327,17 @@ async def build_fiscal_snapshot(fiscal_year_start: int) -> dict:
     }
 
 
+async def _owner_operating_year():
+    latest = await sdb.fiscal_snapshots.find_one({}, {"_id": 0, "fiscal_year_start": 1}, sort=[("fiscal_year_start", -1)])
+    return int(latest["fiscal_year_start"]) + 1 if latest else 2026
+
+
 async def build_owner_annual_summary(year: int, end_date: str = None) -> dict:
     """Read-only yearly business totals; independent of Container & TT."""
     prior = await sdb.fiscal_snapshots.find_one(
         {"fiscal_year_start": year - 1}, {"_id": 0, "close_date": 1})
     start = _next_day(prior["close_date"]) if prior and prior.get("close_date") else f"{year}-01-01"
-    end = end_date or (now_iso()[:10] if year == _current_fiscal_year_start(current_company.get()) else f"{year}-12-31")
-    if end < start:
-        end = start
+    end = end_date or (now_iso()[:10] if year == await _owner_operating_year() else f"{year}-12-31")
     def date_filter(field):
         return {field: {"$gte": start, "$lte": end + "T23:59:59"}}
     def amount(rows, key):
@@ -4393,7 +4396,7 @@ async def owner_annual_summary(fiscal_year_start: int, user: dict = Depends(requ
         return {"summary": {**snap["annual_summary"], "opening_stock": opening_stock, "opening_vehicles_count": opening_vehicles, "closing_vehicles_count": (snap.get("closing_stock") or {}).get("vehicles_count")}, "closing_stock": snap.get("closing_stock"),
                 "closed": True, "closed_at": snap.get("close_date")}
     summary = await build_owner_annual_summary(fiscal_year_start)
-    stock = await compute_stock_valuation() if fiscal_year_start == _current_fiscal_year_start(current_company.get()) else None
+    stock = await compute_stock_valuation() if fiscal_year_start == await _owner_operating_year() else None
     return {"summary": {**summary, "opening_stock": opening_stock, "opening_vehicles_count": opening_vehicles, "closing_vehicles_count": (stock or {}).get("vehicles_count")}, "closing_stock": stock, "closed": bool(snap), "closed_at": (snap or {}).get("close_date")}
 
 
@@ -4408,6 +4411,7 @@ async def owner_fiscal_years(user: dict = Depends(require("settings.manage"))):
     # Show the operating 2026 year and any years explicitly recorded in metadata.
     # Do not fabricate empty historical years in the owner folder.
     years.add(2026)
+    years.add(await _owner_operating_year())
     snaps = {int(x["fiscal_year_start"]): x for x in await sdb.fiscal_snapshots.find({}, {"_id": 0, "fiscal_year_start": 1, "snapshot_at": 1}).to_list(200)}
     return {"years": [{"fiscal_year_start": y, "label": _period_label(y),
                          "closed": bool(meta.get(y, {}).get("closed")),
@@ -4439,7 +4443,7 @@ async def owner_close_fiscal_year(fiscal_year_start: int, user: dict = Depends(r
     later = await sdb.fiscal_snapshots.find_one({"fiscal_year_start": {"$gte": fiscal_year_start + 1}}, {"_id": 0})
     if later:
         raise HTTPException(status_code=409, detail="A later year is already closed")
-    if fiscal_year_start != _current_fiscal_year_start(current_company.get()) and fiscal_year_start != 2026:
+    if fiscal_year_start != await _owner_operating_year():
         raise HTTPException(status_code=409, detail="Only the current operating year can be closed")
     snap = await build_fiscal_snapshot(fiscal_year_start)
     snap["annual_summary"] = await build_owner_annual_summary(fiscal_year_start, snap["close_date"])
@@ -4457,7 +4461,7 @@ async def owner_close_fiscal_year(fiscal_year_start: int, user: dict = Depends(r
         await sdb.fiscal_snapshots.insert_one({"id": new_id(), **snap})
     next_year = fiscal_year_start + 1
     await sdb.fiscal_years.update_one({"fiscal_year_start": next_year},
-        {"$setOnInsert": {"id": new_id(), "fiscal_year_start": next_year, "closed": False, "created_at": now_iso(), "opening_stock": snap["closing_stock"]["total_value"], "opening_date": _next_day(snap["close_date"])}}, upsert=True)
+        {"$setOnInsert": {"id": new_id(), "fiscal_year_start": next_year, "closed": False, "created_at": now_iso(), "opening_date": _next_day(snap["close_date"])}, "$set": {"opening_stock": snap["closing_stock"]["total_value"], "opening_vehicles_count": snap["closing_stock"]["vehicles_count"]}}, upsert=True)
     await audit(user, "close", "fiscal_year", f"Closed fiscal year {_period_label(fiscal_year_start)} with snapshot")
     return {"ok": True}
 
