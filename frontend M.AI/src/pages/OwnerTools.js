@@ -125,9 +125,9 @@ export default function OwnerTools() {
                   <tbody className="divide-y divide-[#304358]">
                     {[
                       ["Opening Stock — Previous Year","opening_stock"],
-                      ["Opening Vehicles — Previous Year","opening_vehicles_count","count"],
+                      ["Opening Stock Vehicles — Previous Year","opening_vehicles_count","count"],
                       ["Total Purchasing — Cars, Parts & Others","purchasing_total"],
-                      ["Total Vehicles Purchased — This Year","vehicles_purchased_count","count"],
+                      ["This Year's Vehicle Purchasing","vehicles_purchased_count","count"],
                       ["Dismantled Cars (Total)","dismantled_count","count"],
                       ["Dismantled Cars Purchase Value","dismantled_purchase_value"],
                       ["Complete Cars Sold","complete_sold_count","count"],
@@ -139,7 +139,6 @@ export default function OwnerTools() {
                       ["Local Sales (Other)","local_other_sales"],
                       ["Invoice Sales","invoice_sales"],
                       ["Total Expenses","expenses_total"],
-                      ...(yearReport.closed ? [["Closing Vehicles","closing_vehicles_count","count"]] : []),
                     ].map(([label,key,type])=><tr key={key} className="odd:bg-[#071320] even:bg-[#0b1c2d]"><td className="px-3 py-2.5">{label}</td><td className="break-words px-2 py-2.5 text-right font-semibold">{type==="count"?(yearReport.summary[key] == null ? "—" : `${yearReport.summary[key]} Cars`):money(yearReport.summary[key]??0)}</td></tr>)}
                   </tbody>
                 </table>
@@ -147,6 +146,10 @@ export default function OwnerTools() {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-emerald-500 bg-gradient-to-br from-[#073d2d] to-[#071b1d] p-3"><div className="flex items-center gap-1 text-xs font-bold sm:text-sm"><TrendingUp size={16}/> Net Profit*</div><div className="mt-2 break-words text-lg font-bold text-emerald-300 sm:text-xl">{money(yearReport.summary.net_profit??0)}</div></div>
                 <div className="rounded-xl border border-sky-400 bg-gradient-to-br from-[#083051] to-[#071b2d] p-3"><div className="flex items-center gap-1 text-xs font-bold sm:text-sm"><Package size={16}/> Closing Stock</div><div className="mt-2 break-words text-lg font-bold text-sky-200 sm:text-xl">{yearReport.closing_stock?money(yearReport.closing_stock.total_value??0):"—"}</div></div>
+              </div>
+              <div className="mt-2 rounded-xl border border-sky-400 bg-gradient-to-br from-[#083051] to-[#071b2d] p-3">
+                <div className="flex items-center gap-1 text-xs font-bold sm:text-sm"><Package size={16}/> Closing Stock Vehicles</div>
+                <div className="mt-2 break-words text-xl font-bold text-sky-200">{yearReport.summary.closing_vehicles_count == null ? "—" : `${yearReport.summary.closing_vehicles_count} Cars`}</div>
               </div>
               <p className="mt-2 text-[11px] text-slate-400">*Profit currently uses invoice-based P&amp;L. Scrap, Shokubai and other recovery totals are listed separately; they are not yet included in this profit figure.</p>
             </>}
