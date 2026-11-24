@@ -120,12 +120,14 @@ export default function OwnerTools() {
             {!reportBusy && !yearReport?.summary && <p className="py-5 text-center text-slate-300">No report available for this year.</p>}
             {!reportBusy && yearReport?.summary && <>
               <div className="overflow-x-auto rounded-lg border border-[#284057]">
-                <table className="w-full min-w-[390px] text-left text-sm">
-                  <thead className="bg-[#101f31] text-slate-200"><tr><th className="p-3">Item</th><th className="p-3 text-right">Total</th></tr></thead>
+                <table className="w-full table-fixed text-left text-sm">
+                  <thead className="bg-[#101f31] text-slate-200"><tr><th className="p-3">Item</th><th className="w-[36%] p-3 text-right">Total</th></tr></thead>
                   <tbody className="divide-y divide-[#304358]">
                     {[
                       ["Opening Stock — Previous Year","opening_stock"],
+                      ["Opening Vehicles — Previous Year","opening_vehicles_count","count"],
                       ["Total Purchasing — Cars, Parts & Others","purchasing_total"],
+                      ["Total Vehicles Purchased — This Year","vehicles_purchased_count","count"],
                       ["Dismantled Cars (Total)","dismantled_count","count"],
                       ["Dismantled Cars Purchase Value","dismantled_purchase_value"],
                       ["Complete Cars Sold","complete_sold_count","count"],
@@ -137,7 +139,8 @@ export default function OwnerTools() {
                       ["Local Sales (Other)","local_other_sales"],
                       ["Invoice Sales","invoice_sales"],
                       ["Total Expenses","expenses_total"],
-                    ].map(([label,key,type])=><tr key={key} className="odd:bg-[#071320] even:bg-[#0b1c2d]"><td className="px-3 py-2.5">{label}</td><td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold">{type==="count"?`${yearReport.summary[key]??0} Cars`:money(yearReport.summary[key]??0)}</td></tr>)}
+                      ...(yearReport.closed ? [["Closing Vehicles","closing_vehicles_count","count"]] : []),
+                    ].map(([label,key,type])=><tr key={key} className="odd:bg-[#071320] even:bg-[#0b1c2d]"><td className="px-3 py-2.5">{label}</td><td className="break-words px-2 py-2.5 text-right font-semibold">{type==="count"?(yearReport.summary[key] == null ? "—" : `${yearReport.summary[key]} Cars`):money(yearReport.summary[key]??0)}</td></tr>)}
                   </tbody>
                 </table>
               </div>
