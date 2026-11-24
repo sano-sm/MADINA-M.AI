@@ -22,7 +22,7 @@ export function Modal({ open, onClose, title, children, testid, wide }) {
 
 export function Field({ label, children }) {
   return (
-    <label className="block mb-3">
+    <label className="block min-w-0 mb-3">
       <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
       {children}
     </label>
@@ -32,7 +32,8 @@ export function Field({ label, children }) {
 export function Input(props) {
   return (
     <input {...props}
-      className={`w-full rounded-sm border border-input bg-[var(--surface-2)] px-3 py-2 text-sm text-white outline-none focus:border-[var(--gold)] ${props.className || ""}`} />
+      style={{ ...(["date", "month", "datetime-local", "time", "week"].includes(props.type) ? { appearance: "none", WebkitAppearance: "none", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", display: "block" } : {}), ...props.style }}
+      className={`w-full min-w-0 max-w-full rounded-sm border border-input bg-[var(--surface-2)] px-3 py-2 text-sm text-white outline-none focus:border-[var(--gold)] ${props.className || ""}`} />
   );
 }
 
