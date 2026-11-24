@@ -4366,6 +4366,7 @@ async def build_owner_annual_summary(year: int, end_date: str = None) -> dict:
     return {
         "year": year, "period_start": start, "period_end": end,
         "purchasing_total": round(purchase_total, 2),
+        "vehicles_purchased_count": len(purchased),
         "dismantled_count": len(dismantled), "dismantled_purchase_value": amount(dismantled, "purchase_price"),
         "complete_sold_count": len(complete), "complete_sales_amount": amount(complete, "sale_price"),
         "engine_sales": round(engine, 2), "spare_parts_sales": round(spare, 2),
@@ -4387,12 +4388,13 @@ async def owner_annual_summary(fiscal_year_start: int, user: dict = Depends(requ
         {"fiscal_year_start": fiscal_year_start - 1},
         {"_id": 0, "closing_stock": 1})
     opening_stock = round(float(((prior_snapshot or {}).get("closing_stock") or {}).get("total_value") or 0), 2)
+    opening_vehicles = ((prior_snapshot or {}).get("closing_stock") or {}).get("vehicles_count") if prior_snapshot else 0
     if snap and snap.get("annual_summary"):
-        return {"summary": {**snap["annual_summary"], "opening_stock": opening_stock}, "closing_stock": snap.get("closing_stock"),
+        return {"summary": {**snap["annual_summary"], "opening_stock": opening_stock, "opening_vehicles_count": opening_vehicles, "closing_vehicles_count": (snap.get("closing_stock") or {}).get("vehicles_count")}, "closing_stock": snap.get("closing_stock"),
                 "closed": True, "closed_at": snap.get("close_date")}
     summary = await build_owner_annual_summary(fiscal_year_start)
     stock = await compute_stock_valuation() if fiscal_year_start == _current_fiscal_year_start(current_company.get()) else None
-    return {"summary": {**summary, "opening_stock": opening_stock}, "closing_stock": stock, "closed": bool(snap), "closed_at": (snap or {}).get("close_date")}
+    return {"summary": {**summary, "opening_stock": opening_stock, "opening_vehicles_count": opening_vehicles, "closing_vehicles_count": (stock or {}).get("vehicles_count")}, "closing_stock": stock, "closed": bool(snap), "closed_at": (snap or {}).get("close_date")}
 
 
 @api.get("/owner/fiscal-years")
