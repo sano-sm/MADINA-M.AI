@@ -68,19 +68,19 @@ export default function Brokers() {
       <PageHeader title={t("brokers")} actions={editable &&
         <Btn data-testid="add-broker-btn" onClick={() => setAddOpen(true)}><Plus size={16} />{t("add_broker")}</Btn>} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {rows.map((b) => (
           <button key={b.id} data-testid={`broker-card-${b.id}`} onClick={() => openDetail(b.id)}
-            className="card-surface flex items-center justify-between rounded-sm p-4 text-start hover:border-[var(--gold)]/50">
-            <div>
-              <div className="font-semibold text-white">{b.name}</div>
-              <div className="mt-1 flex gap-2 text-xs">
+            className="card-surface flex min-w-0 items-center justify-between gap-1 rounded-sm p-3 text-start hover:border-[var(--gold)]/50">
+            <div className="min-w-0 flex-1">
+              <div className="break-words font-semibold text-white" style={{overflowWrap:"anywhere"}}>{b.name}</div>
+              <div className="mt-1 flex flex-wrap gap-1 text-xs">
                 {b.account.payment_due > 0 && <Badge tone="red">{t("payment_due")}: {money(b.account.payment_due)}</Badge>}
                 {b.account.advance > 0 && <Badge tone="green">{t("advance")}: {money(b.account.advance)}</Badge>}
                 {b.account.pending_count > 0 && <Badge tone="gold">{b.account.pending_count} {t("pending")}</Badge>}
               </div>
             </div>
-            <ChevronRight size={18} className="text-muted-foreground" />
+            <ChevronRight size={18} className="shrink-0 text-muted-foreground" />
           </button>
         ))}
         {!rows.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
@@ -195,13 +195,17 @@ function BrokerDetail({ detail, setDetail, reload, editable }) {
         <Info l={t("advance")} v={money(a.advance)} cls="text-emerald-400" />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <h4 className="font-head font-bold gold-text">{t("vehicles")} · {a.pending_count} {t("pending")} / {a.received_count} {t("received")}</h4>
-        <div className="flex flex-wrap gap-2">
-          <IssuePanel kind="broker" party={detail} fullReport={printBrokerVehicles} />
-          {editable && <Btn variant="ghost" data-testid="broker-add-vehicle" onClick={() => setVeh({ vehicle_name: "", purchase_price: "", paid_amount: "", payment_method: "bank", chassis_number: "", purchase_date: new Date().toISOString().slice(0, 10) })}><Plus size={16} />{t("add")}</Btn>}
-        </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 rounded-sm border border-border p-3">
+        <Info l="Total Cars" v={(detail.vehicles || []).length} />
+        <Info l="Pending Cars" v={a.pending_count || 0} cls="gold-text" />
       </div>
+      <div className="mt-3" style={{display:"grid",gridTemplateColumns:editable?"repeat(3,minmax(0,1fr))":"minmax(0,1fr)",gap:6}}>
+        <div className="broker-action"><IssuePanel kind="broker" party={detail} fullReport={printBrokerVehicles} /></div>
+        {editable && <div className="broker-action"><Btn variant="dark" data-testid="broker-add-vehicle" onClick={() => setVeh({ vehicle_name: "", purchase_price: "", paid_amount: "", payment_method: "bank", chassis_number: "", purchase_date: new Date().toISOString().slice(0, 10) })}><Plus size={16} />{t("vehicles") === "Vehicles" ? "Add Vehicle" : `${t("add")} ${t("vehicles")}`}</Btn></div>}
+        {editable && <div className="broker-action"><Btn variant="dark" data-testid="broker-add-payment" onClick={() => setPay({ amount: "", method: "cash", note: "", date: new Date().toISOString().slice(0, 10) })}><Plus size={16} />{t("add_payment") === "add_payment" ? "Add Payment" : t("add_payment")}</Btn></div>}
+      </div>
+      <style>{".broker-action{min-width:0}.broker-action > button{width:100%;min-width:0;min-height:56px;height:100%;padding:8px 3px;white-space:normal;overflow-wrap:anywhere;justify-content:center;text-align:center;font-size:12px;line-height:1.25}.broker-action > button svg{flex-shrink:0}"}</style>
+      <h4 className="mt-4 font-head font-bold gold-text">{t("vehicles")} · {a.pending_count} {t("pending")} / {a.received_count} {t("received")}</h4>
       {detail.vehicles.map((v) => (
         <div key={v.id} data-testid={`bv-${v.id}`} className="mt-2 rounded-sm border border-border p-3 text-sm">
           <div className="flex items-center justify-between">
@@ -225,7 +229,6 @@ function BrokerDetail({ detail, setDetail, reload, editable }) {
 
       <div className="mt-4 flex items-center justify-between">
         <h4 className="font-head font-bold gold-text">{t("payments")}</h4>
-        {editable && <Btn variant="ghost" data-testid="broker-add-payment" onClick={() => setPay({ amount: "", method: "cash", note: "", date: new Date().toISOString().slice(0, 10) })}><Plus size={16} />{t("add")}</Btn>}
       </div>
       {detail.payments.map((p) => (
         <div key={p.id} className="flex justify-between border-b border-border py-1.5 text-sm">
