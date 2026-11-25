@@ -8,6 +8,28 @@ import { toast } from "sonner";
 import { Archive, ChevronLeft, Download, Eye, FolderOpen, LockKeyhole, UnlockKeyhole, CalendarDays, BarChart3, Info, FileText, Package, TrendingUp, Settings2, Printer, CheckCircle2, FolderArchive, FilePenLine, DatabaseBackup } from "lucide-react";
 
 export default function OwnerTools() {
+  const [unlocked,setUnlocked] = useState(false);
+  const [pin,setPin] = useState("");
+  const [checking,setChecking] = useState(false);
+  const unlock = async () => {
+    setChecking(true);
+    try { await api.post("/owner/pin/verify",{pin},{__noRetry:true}); setUnlocked(true); }
+    catch(e) { toast.error(apiError(e)); }
+    finally { setPin(""); setChecking(false); }
+  };
+  if (!unlocked) return <div className="mx-auto max-w-sm rounded-xl border border-border p-5">
+    <PageHeader title="OWNER TOOLS"/>
+    <p className="mb-3">Owner PIN · اونر پن کوڈ</p>
+    <form onSubmit={e=>{e.preventDefault();unlock();}} className="space-y-3">
+      <input type="password" inputMode="numeric" autoComplete="off" maxLength={4} value={pin} onChange={e=>setPin(e.target.value)} className="w-full rounded border border-border bg-transparent p-3"/>
+      <Btn disabled={checking || !/^\d{4}$/.test(pin)}><LockKeyhole size={16}/> Unlock</Btn>
+    </form>
+    <p className="mt-3 text-xs text-muted-foreground">Configure the independent Owner PIN in Settings first.</p>
+  </div>;
+  return <OwnerToolsContent/>;
+}
+
+function OwnerToolsContent() {
   const { t } = useI18n();
   const { money } = useSettings();
   const [years, setYears] = useState([]);
@@ -175,7 +197,7 @@ export default function OwnerTools() {
         {both && <input type="password" autoComplete="current-password" className="rounded p-2 text-black" placeholder="Owner password" value={ownerPassword} onChange={e => setOwnerPassword(e.target.value)} />}
         <Btn disabled={busy} onClick={backup}><Download size={16} />{busy ? t("preparing") : t("full_backup_zip")}</Btn>
         <Btn disabled={busy} variant="dark" onClick={downloadPdf}><Download size={16} />{busy ? t("preparing") : "Download PDF Report"}</Btn>
-      </div><Restore />
+      </div><Restore /><TestReset />
     </section>}
 
     <Modal open={!!snapshot} onClose={() => setSnapshot(null)} title={snapshot?.label || t("view_snapshot")} wide>
@@ -212,4 +234,38 @@ function OwnerDesktopFolder({ title, detail, onClick, icon: Icon }) {
     </span>
     <span className="relative z-10 font-head text-[10px] font-extrabold leading-tight tracking-[0.02em] text-[#f7d996] sm:text-[15px]">{title}</span>
   </button>;
+}
+
+function TestReset() {
+  const [visible,setVisible]=useState(false);
+  const [status,setStatus]=useState(null);
+  const [step,setStep]=useState(0);
+  const [screen,setScreen]=useState("");
+  const [owner,setOwner]=useState("");
+  const [busy,setBusy]=useState(false);
+  const clear=()=>{setStep(0);setScreen("");setOwner("");};
+  useEffect(()=>{api.get("/owner/test-reset/status").then(r=>setStatus(r.data)).catch(()=>setStatus(null));},[]);
+  const run=async(fn)=>{setBusy(true);try{await fn();}catch(e){toast.error(apiError(e));}finally{setBusy(false);}};
+  const verifyScreen=()=>run(async()=>{await api.post("/auth/pin/verify",{pin:screen},{__noRetry:true});setStep(3);});
+  const backup=()=>run(async()=>{
+    const r=await api.get("/owner/backup.zip",{responseType:"blob"});
+    const url=URL.createObjectURL(r.data);const a=document.createElement("a");a.href=url;a.download=status.company+"-before-reset.zip";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    toast.success("Backup download started. Check the file before continuing.");setStep(4);
+  });
+  const verifyOwner=()=>run(async()=>{if(screen===owner)throw Error("PINs must differ");await api.post("/owner/pin/verify",{pin:owner},{__noRetry:true});setStep(5);});
+  const finish=()=>run(async()=>{await api.post("/owner/test-reset",{company:status.company,screen_pin:screen,owner_pin:owner,confirmation:"DELETE "+status.company},{__noRetry:true});clear();setVisible(false);toast.success("Test business data deleted");window.location.reload();});
+  if(!status?.enabled)return null;
+  return <div className="mt-4 border-t border-border pt-2">
+    <div className="flex justify-end"><button type="button" aria-label="Show or hide test reset" disabled={busy} onClick={()=>{clear();setVisible(v=>!v);}} className="p-2 text-muted-foreground"><Eye size={15}/></button></div>
+    {visible&&<div className="space-y-3 rounded-xl border border-red-700 p-3">
+      <h3 className="font-bold text-red-400">Test Data Reset · {status.company}</h3>
+      {step===0&&<Btn variant="dark" onClick={()=>setStep(1)}>Delete Test Business Data</Btn>}
+      {step===1&&<><p>All business records for {status.company} will be deleted. منتخب کمپنی کا کاروباری ڈیٹا ختم ہوگا۔</p><Btn onClick={()=>setStep(2)}>Confirm</Btn></>}
+      {step===2&&<><label>Screen PIN</label><input type="password" inputMode="numeric" autoComplete="off" value={screen} onChange={e=>setScreen(e.target.value)} className="w-full rounded border border-border bg-transparent p-2"/><Btn disabled={busy||!screen} onClick={verifyScreen}>OK</Btn></>}
+      {step===3&&<><p>Optional Backup · بیک اپ اختیاری ہے</p><div className="flex flex-wrap gap-2"><Btn disabled={busy} onClick={backup}><Download size={16}/> Download Backup</Btn><Btn disabled={busy} variant="dark" onClick={()=>setStep(4)}>Skip Backup</Btn></div></>}
+      {step===4&&<><label>Owner PIN</label><input type="password" inputMode="numeric" autoComplete="off" value={owner} onChange={e=>setOwner(e.target.value)} className="w-full rounded border border-border bg-transparent p-2"/><Btn disabled={busy||!owner} onClick={verifyOwner}>OK</Btn></>}
+      {step===5&&<><p className="font-bold text-red-400">WARNING: Permanent deletion of {status.company} test business records.</p><p dir="rtl">خبردار! آخری ڈیلیٹ دبانے سے منتخب کمپنی کا کاروباری ریکارڈ مستقل ختم ہو جائے گا۔</p><button type="button" disabled={busy} onClick={finish} className="rounded bg-red-800 px-4 py-3 font-bold text-white">Final Delete · {status.company}</button></>}
+      {step>0&&<button type="button" disabled={busy} onClick={clear} className="ml-2 p-2 underline">Cancel</button>}
+    </div>}
+  </div>;
 }
