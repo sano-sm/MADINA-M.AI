@@ -15,7 +15,7 @@ import {
   UserCog, Settings as SettingsIcon, Package, Bell, Cog, Recycle,
   CalendarRange, User, Home, Clock, Plus, Search, Power, Contact,
   Landmark, Container, Menu, Languages, PiggyBank, TrendingUp,
-  PieChart, ClipboardList, AlertTriangle, ChevronDown, Mic, Camera, Bot,
+  PieChart, ClipboardList, AlertTriangle, ChevronDown, Mic, Camera, Bot, Eye, EyeOff,
 } from "lucide-react";
 
 const GOLD = "#D4AF37";
@@ -49,6 +49,7 @@ export default function Launcher() {
   const { t, tOther, lang, setLang } = useI18n();
   const { settings, money } = useSettings();
   const [stats, setStats] = useState(null);
+  const [showTopStats, setShowTopStats] = useState(false);
   const [biz, setBiz] = useState(null);
   const [alerts, setAlerts] = useState(null);
   const [series, setSeries] = useState([]);
@@ -179,12 +180,15 @@ export default function Launcher() {
         <div className="flex shrink-0 items-center gap-1">
           {prefs.master && prefs.agent && <button type="button" title="AI - External Agent" aria-label="AI - External Agent" onClick={() => window.dispatchEvent(new CustomEvent("madina:toggle-voice", {detail:{kind:"agent"}}))} className={`rounded-full border p-1 text-gray-300 ${voiceKind==="agent"?"border-emerald-400 text-emerald-300 animate-pulse":"border-white/20"}`}><Mic size={15}/><span className="block text-[8px] font-bold leading-none">AI</span></button>}
           {prefs.master && prefs.voice && <button type="button" title="MAI - Madina Assistant" aria-label="MAI - Madina Assistant" onClick={() => window.dispatchEvent(new CustomEvent("madina:toggle-voice", {detail:{kind:"voice"}}))} className={`rounded-full border p-1 text-gray-300 ${voiceKind==="voice"?"border-emerald-400 text-emerald-300 animate-pulse":"border-white/20"}`}><Mic size={15}/><span className="block text-[8px] font-bold leading-none">MAI</span></button>}
-          <img src={settings?.logo_url || "/logo.png"} alt="MTC" className="h-11 w-11 rounded-xl object-cover ring-1 ring-[var(--gold)]/40 sm:h-12 sm:w-12" />
+          <div className="relative shrink-0">
+            <img src={settings?.logo_url || "/logo.png"} alt="MTC" className="h-11 w-11 rounded-xl object-cover ring-1 ring-[var(--gold)]/40 sm:h-12 sm:w-12" />
+            {can("dashboard.view") && <button type="button" data-testid="home-stats-toggle" aria-label={showTopStats ? "Hide company counts" : "Show company counts"} aria-expanded={showTopStats} title={showTopStats ? "Hide company counts" : "Show company counts"} onClick={() => setShowTopStats(v => !v)} className="absolute inset-0 flex items-end justify-end rounded-xl p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]"><span className="rounded-full bg-black/60 p-0.5 text-[#d4af37]/80">{showTopStats ? <Eye size={13}/> : <EyeOff size={13}/>}</span></button>}
+          </div>
         </div>
       </div>
 
       {/* Top stats */}
-      {stats && (
+      {showTopStats && can("dashboard.view") && stats && (
         <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/5 bg-white/5 sm:grid-cols-4 animate-fade-up">
           <TopStat icon={Car} color={GOLD} label="MTC Vehicles" sub="MTC گاڑیاں" value={stats.purchase_company_counts?.MTC?.vehicles || 0} />
           <TopStat icon={Disc3} color={SILVER} label="MTC Parts" sub="MTC پارٹس" value={stats.purchase_company_counts?.MTC?.parts || 0} />
