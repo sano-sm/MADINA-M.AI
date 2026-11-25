@@ -113,7 +113,7 @@ export default function Launcher() {
   const navigate = useNavigate();
   const { prefs } = useAiPreferences();
   const { user, can, logout } = useAuth();
-  const { t, tOther, lang, setLang } = useI18n();
+  const { t, tOther, lang, setLang, showUrduInEnglish, showEnglishInUrdu } = useI18n();
   const { settings, money } = useSettings();
   const [stats, setStats] = useState(null);
   const [showTopStats, setShowTopStats] = useState(false);
@@ -276,8 +276,11 @@ export default function Launcher() {
             )}
             <a.icon size={22} style={{ color: a.color }} strokeWidth={1.7} />
             <div className="w-full min-w-0 text-center">
-              <div lang="en" dir="ltr" className="text-[10px] font-bold leading-tight text-white sm:text-[11px]">{APP_LABELS[a.key][0]}</div>
-              <div lang="ur" dir="rtl" className="mt-0.5 text-[11px] font-bold leading-[1.85] text-emerald-400 sm:text-xs" style={{fontFamily:'"Noto Nastaliq Urdu", "Noto Naskh Arabic", serif'}}>{APP_LABELS[a.key][1]}</div>
+              {(lang === "en" ? ["en", ...(showUrduInEnglish ? ["ur"] : [])] : ["ur", ...(showEnglishInUrdu ? ["en"] : [])]).map((labelLang, index) => (
+                <div key={labelLang} lang={labelLang} dir={labelLang === "ur" ? "rtl" : "ltr"}
+                  className={(labelLang === "ur" ? "text-[11px] font-bold leading-[1.85] sm:text-xs" : "text-[10px] font-bold leading-tight sm:text-[11px]") + (index === 0 ? " text-white" : " mt-0.5 text-emerald-400")}
+                  style={labelLang === "ur" ? {fontFamily:'"Noto Nastaliq Urdu", "Noto Naskh Arabic", serif'} : undefined}>{APP_LABELS[a.key][labelLang === "ur" ? 1 : 0]}</div>
+              ))}
             </div>
           </button>
         ))}
