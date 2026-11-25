@@ -8,12 +8,12 @@ import { useSettings } from "@/context/SettingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { PageHeader, Btn, Modal, Field, Input, Select, Empty, Badge } from "@/components/kit";
 import { toast } from "sonner";
-import { Plus, Trash2, Building2, Users, Shield, Lock, Bot, Palette, Check } from "lucide-react";
+import { Plus, Trash2, Building2, Users, Shield, Lock, Bot, Palette, Check, Languages } from "lucide-react";
 
-const TABS = [{ k: "company_profile", icon: Building2 }, { k: "users_roles", icon: Users }, { k: "manage_roles", icon: Shield }, { k: "security", icon: Lock }, { k: "ai_controls", icon: Bot }, { k: "appearance", icon: Palette }];
+const TABS = [{ k: "company_profile", icon: Building2 }, { k: "users_roles", icon: Users }, { k: "manage_roles", icon: Shield }, { k: "security", icon: Lock }, { k: "ai_controls", icon: Bot }, { k: "appearance", icon: Palette }, { k: "language_display", icon: Languages }];
 
 export default function Settings() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { can } = useAuth();
   const [params] = useSearchParams();
   const [tab, setTab] = useState(params.get("tab") || "company_profile");
@@ -25,10 +25,11 @@ export default function Settings() {
         {TABS.map((x) => (
           <button key={x.k} data-testid={`set-tab-${x.k}`} onClick={() => setTab(x.k)}
             className={`flex items-center gap-2 rounded-sm border px-4 py-2 text-sm font-medium transition-colors ${tab === x.k ? "gold-gradient border-transparent text-black" : "border-border text-gray-300 hover:text-white"}`}>
-            <x.icon size={15} />{t(x.k)}
+            <x.icon size={15} />{x.k === "language_display" ? (lang === "ur" ? "زبان کی ترتیب" : "Language Display") : t(x.k)}
           </button>))}
       </div>
       {tab === "appearance" && <AppearanceTheme />}
+      {tab === "language_display" && <LanguageDisplay />}
       {tab === "company_profile" && <Company t={t} manage={manage} />}
       {tab === "users_roles" && <UsersTab t={t} manage={manage} />}
       {tab === "manage_roles" && <RolesTab t={t} manage={manage} />}
@@ -36,6 +37,21 @@ export default function Settings() {
       {tab === "ai_controls" && (manage ? <AiControls /> : <div className="text-sm text-muted-foreground">Owner / settings manager permission required.</div>)}
     </div>
   );
+}
+
+function LanguageDisplay() {
+  const {lang, showUrduInEnglish, setShowUrduInEnglish, showEnglishInUrdu, setShowEnglishInUrdu} = useI18n();
+  const ur = lang === "ur";
+  return <div className="card-surface max-w-xl rounded-xl p-4">
+    <h2 className="mb-3 flex items-center gap-2 font-bold"><Languages size={19} className="gold-text"/>{ur ? "زبان کی ترتیب" : "Language Display"}</h2>
+    {[
+      ["urdu-in-english", ur ? "انگلش کے ساتھ اردو دکھائیں" : "Show Urdu in English Mode", showUrduInEnglish, setShowUrduInEnglish],
+      ["english-in-urdu", ur ? "اردو کے ساتھ انگلش دکھائیں" : "Show English in Urdu Mode", showEnglishInUrdu, setShowEnglishInUrdu]
+    ].map(([key,label,checked,change]) => <label key={key} className="flex cursor-pointer items-center justify-between gap-3 border-b border-border py-3 text-sm font-medium">
+      <span>{label}</span><input type="checkbox" data-testid={key} checked={checked} onChange={e=>change(e.target.checked)} className="h-5 w-5 shrink-0 accent-yellow-500"/>
+    </label>)}
+    <p className="mt-3 text-xs text-muted-foreground">{ur ? "یہ ترتیب ہوم سکرین کے آئیکنوں کے لیے ہے اور اسی ڈیوائس پر خودکار محفوظ ہوتی ہے۔" : "Home folder labels only. Saved automatically on this device."}</p>
+  </div>;
 }
 
 function AppearanceTheme() {
