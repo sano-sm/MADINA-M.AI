@@ -1314,8 +1314,21 @@ async def get_vehicle(vid: str, user: dict = Depends(require("vehicles.view"))):
     return v
 
 
+async def scanner_chassis_check(chassis, exclude_broker=None):
+    normalized = re.sub(r"[^A-Z0-9]", "", str(chassis or "").upper())
+    if not normalized:
+        return
+    for collection, label in [(sdb.vehicles, "Vehicle"), (sdb.broker_vehicles, "Broker")]:
+        async for record in collection.find({}, {"chassis_number": 1, "id": 1}):
+            if label == "Broker" and exclude_broker and record.get("id") == exclude_broker:
+                continue
+            if re.sub(r"[^A-Z0-9]", "", str(record.get("chassis_number") or "").upper()) == normalized:
+                raise HTTPException(status_code=409, detail=f"Chassis number already exists in {label}")
+
+
 @api.post("/vehicles")
 async def create_vehicle(body: Vehicle, user: dict = Depends(require("vehicles.edit"))):
+    await scanner_chassis_check(body.chassis_number, body.broker_vehicle_id)
     if await sdb.vehicles.find_one({"chassis_number": body.chassis_number}):
         raise HTTPException(status_code=400, detail="Chassis number already exists")
     doc = body.model_dump()
@@ -4154,6 +4167,7 @@ async def delete_broker(bid: str, user: dict = Depends(require("finance.edit")))
 
 @api.post("/brokers/{bid}/vehicles")
 async def add_broker_vehicle(bid: str, body: BrokerVehicleIn, user: dict = Depends(require("finance.edit"))):
+    await scanner_chassis_check(body.chassis_number)
     if not await sdb.brokers.find_one({"id": bid}, {"_id": 0}):
         raise HTTPException(status_code=404, detail="Broker not found")
     doc = body.model_dump()
