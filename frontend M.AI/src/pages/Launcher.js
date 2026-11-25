@@ -34,7 +34,7 @@ const APPS = [
   { key: "customers", route: "/customers", icon: Users, perm: "customers.view", color: GOLD },
   { key: "loans", route: "/loans", icon: Landmark, perm: "reports.view", color: GOLD },
   { key: "brokers", route: "/brokers", icon: Contact, perm: "finance.view", color: GOLD },
-  { key: "users", route: "/empty/users", icon: UserCog, perm: "settings.view", color: GOLD },
+  { key: "invoices", route: "/invoices", icon: Receipt, perm: "settings.manage", color: GOLD },
   { key: "alerts", route: "/alerts", icon: Bell, perm: "dashboard.view", color: GOLD, badge: true },
   { key: "settings", route: "/settings?tab=company_profile", icon: SettingsIcon, perm: "settings.view", color: GOLD },
   { key: "container_tt", route: "/container", icon: Container, perm: "finance.view", color: GOLD },
@@ -152,7 +152,7 @@ export default function Launcher() {
             {apps.map((a) => (
               <button key={a.key} data-testid={`menu-${a.key}`} onClick={() => openApp(a)}
                 className="flex items-center gap-2 rounded-lg px-2 py-2 text-xs text-white hover:bg-white/10">
-                <a.icon size={16} style={{ color: a.color }} />{t(a.key)}
+                <a.icon size={16} style={{ color: a.color }} />{a.key === "invoices" ? "Invoices" : t(a.key)}
               </button>
             ))}
           </div>
@@ -205,8 +205,8 @@ export default function Launcher() {
             )}
             <a.icon size={22} style={{ color: a.color }} strokeWidth={1.7} />
             <div className="text-center leading-tight">
-              <div className="text-[10px] font-semibold text-white sm:text-[11px]">{a.key === "expenses" ? "Expenses & Shipping" : t(a.key)}</div>
-              <div className="text-[9px] font-semibold text-emerald-400">{tOther(a.key)}</div>
+              <div className="text-[10px] font-semibold text-white sm:text-[11px]">{a.key === "expenses" ? "Expenses & Shipping" : a.key === "invoices" ? "Invoices" : t(a.key)}</div>
+              <div className="text-[9px] font-semibold text-emerald-400">{a.key === "invoices" ? "انوائس" : tOther(a.key)}</div>
             </div>
           </button>
         ))}
