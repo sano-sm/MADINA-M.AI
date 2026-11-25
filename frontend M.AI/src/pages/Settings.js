@@ -255,7 +255,7 @@ function SecurityTab({ t, manage }) {
   const [ownerPinSet, setOwnerPinSet] = useState(false);
   useEffect(() => { api.get("/owner/pin/status").then(r => setOwnerPinSet(!!r.data?.pin_set)).catch(() => {}); }, []);
   const saveOwnerPin = async () => {
-    if (!/^\\d{4}$/.test(ownerPin)) return toast.error("Owner PIN must be exactly 4 digits");
+    if (!/^\d{4}$/.test(ownerPin)) return toast.error("Owner PIN must be exactly 4 digits");
     if (ownerPin !== ownerConfirm) return toast.error("Owner PINs do not match");
     setOwnerSaving(true);
     try { await api.post("/owner/pin/set", {pin: ownerPin}); setOwnerPinSet(true); setOwnerPin(""); setOwnerConfirm(""); toast.success("Owner PIN saved"); }
