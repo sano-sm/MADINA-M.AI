@@ -61,9 +61,9 @@ export default function Reports() {
         <iframe title={preview.name} src={preview.url} className="min-h-0 w-full flex-1 rounded bg-white"/>
       </div>}
       {/* Date filter */}
-      <div className="mb-4 flex flex-wrap items-end gap-3 card-surface rounded-sm p-4">
-        <div className="w-40"><Field label={t("from_date")}><Input type="date" data-testid="report-start" value={start} onChange={(e) => setStart(e.target.value)} /></Field></div>
-        <div className="w-40"><Field label={t("to_date")}><Input type="date" data-testid="report-end" value={end} onChange={(e) => setEnd(e.target.value)} /></Field></div>
+      <div className="mb-4 grid grid-cols-2 items-end gap-3 card-surface rounded-sm p-4 lg:grid-cols-4 [&_input]:!h-11 [&_button]:!h-11 [&_button]:w-full">
+        <div className="min-w-0"><Field label={t("from_date")}><Input type="date" data-testid="report-start" value={start} onChange={(e) => setStart(e.target.value)} /></Field></div>
+        <div className="min-w-0"><Field label={t("to_date")}><Input type="date" data-testid="report-end" value={end} onChange={(e) => setEnd(e.target.value)} /></Field></div>
         <Btn data-testid="report-apply" onClick={loadPnl}>{t("apply")}</Btn>
         <Btn variant="dark" data-testid="report-clear" onClick={() => { setStart(""); setEnd(""); }}>{t("clear")}</Btn>
       </div>
@@ -98,16 +98,12 @@ export default function Reports() {
       {/* PDF period reports */}
       <div className="mt-4 card-surface rounded-sm p-5">
         <h3 className="mb-3 font-head text-lg font-bold gold-text">{t("period_reports")}</h3>
-        <div className="flex flex-wrap items-end gap-3">
-          <Btn variant="dark" data-testid="report-today-pdf" disabled={busy} onClick={()=>openPdf("/reports/today/pdf","Daily Report")}><FileText size={15} />{t("today_report")}</Btn>
-          <div className="flex items-end gap-2">
-            <div className="w-40"><Field label={t("select_month")}><Input type="month" data-testid="report-month-input" value={rMonth} onChange={(e) => setRMonth(e.target.value)} /></Field></div>
-            <Btn variant="dark" data-testid="report-monthly-pdf" disabled={busy} onClick={()=>openPdf(`/reports/monthly/pdf?month=${rMonth}`,"Monthly Report")}><FileText size={15} />{t("monthly_report")}</Btn>
-          </div>
-          <div className="flex items-end gap-2">
-            <div className="w-28"><Field label={t("select_year")}><Input type="number" data-testid="report-year-input" value={rYear} onChange={(e) => setRYear(e.target.value)} /></Field></div>
-            <Btn variant="dark" data-testid="report-yearly-pdf" disabled={busy} onClick={()=>openPdf(`/reports/yearly/pdf?year=${rYear}`,"Yearly Report")}><FileText size={15} />{t("yearly_report")}</Btn>
-          </div>
+        <div className="grid grid-cols-2 items-end gap-3 lg:grid-cols-[1fr_1.4fr_1fr_1fr_1fr] [&_input]:!h-11 [&_button]:!h-11 [&_button]:w-full">
+          <div className="col-span-2 lg:col-span-1"><Btn variant="dark" data-testid="report-today-pdf" disabled={busy} onClick={()=>openPdf("/reports/today/pdf","Daily Report")}><FileText size={15} />{t("today_report")}</Btn></div>
+          <div className="min-w-0"><Field label={t("select_month")}><Input type="month" data-testid="report-month-input" value={rMonth} onChange={(e) => setRMonth(e.target.value)} /></Field></div>
+          <Btn variant="dark" data-testid="report-monthly-pdf" disabled={busy} onClick={()=>openPdf(`/reports/monthly/pdf?month=${rMonth}`,"Monthly Report")}><FileText size={15} />{t("monthly_report")}</Btn>
+          <div className="min-w-0"><Field label={t("select_year")}><Input type="number" data-testid="report-year-input" value={rYear} onChange={(e) => setRYear(e.target.value)} /></Field></div>
+          <Btn variant="dark" data-testid="report-yearly-pdf" disabled={busy} onClick={()=>openPdf(`/reports/yearly/pdf?year=${rYear}`,"Yearly Report")}><FileText size={15} />{t("yearly_report")}</Btn>
         </div>
       </div>
 
