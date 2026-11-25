@@ -75,17 +75,18 @@ export function IssuePanel({kind,party,fullReport}) {
     </Modal></>;
 }
 
-export function OwnerDocuments({compact=false, invoiceKind="manual"}){
+export function OwnerDocuments({compact=false, invoiceKind="manual", externalAction=null, hideActions=false}){
   const {settings}=useSettings();
   const [mode,setMode]=useState(""),[seller,setSeller]=useState({name:""}),[rows,setRows]=useState([]),[busy,setBusy]=useState(false);
   const [autoParts,setAutoParts]=useState(null);
   const [nextAutoNumber,setNextAutoNumber]=useState("");
   const [q,setQ]=useState(""),[sortBy,setSortBy]=useState("date"),[docs,setDocs]=useState([]),[selected,setSelected]=useState([]),[archiveCount,setArchiveCount]=useState(0);const requestId=useRef(""),lock=useRef(false),pressTimer=useRef(null),suppressClick=useRef(false);
   useEffect(()=>{if(mode!=="auto")return;let active=true;api.get("/paper/auto-parts/next-number").then(r=>{if(active)setNextAutoNumber(r.data.number||"");}).catch(()=>{});return()=>{active=false;};},[mode]);
-  useEffect(()=>{let active=true;api.get("/paper/archive",{params:{kind:invoiceKind==="custom"?"custom":"standard"}}).then(r=>{if(active)setArchiveCount(r.data.length);}).catch(()=>{});return()=>{active=false;};},[invoiceKind,mode]);
-  useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q,kind:invoiceKind==="custom"?"custom":"standard",sort:sortBy}}).then(r=>{if(current){setDocs(r.data);setSelected([]);}}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q,invoiceKind,sortBy]);
+  useEffect(()=>{let active=true;api.get("/paper/archive",{params:{kind:invoiceKind}}).then(r=>{if(active)setArchiveCount(r.data.length);}).catch(()=>{});return()=>{active=false;};},[invoiceKind,mode]);
+  useEffect(()=>{if(mode!=="archive")return;let current=true;const timer=setTimeout(()=>api.get("/paper/archive",{params:{q,kind:invoiceKind,sort:sortBy}}).then(r=>{if(current){setDocs(r.data);setSelected([]);}}).catch(failed),180);return()=>{current=false;clearTimeout(timer);};},[mode,q,invoiceKind,sortBy]);
   useEffect(()=>{const id=new URLSearchParams(window.location.search).get("record");if(id)readDocument(id).catch(failed);},[]);
   function start(){requestId.current=crypto.randomUUID();if(invoiceKind==="custom"){setNextAutoNumber("");setAutoParts({loading_date:today(),engines:Array.from({length:60},()=>({number:"",price:""})),chassis:Array.from({length:12},()=>({number:"",price:""})),parts:Array.from({length:40},()=>({number:"",price:""}))});setMode("auto");return;}setSeller({name:""});setRows([newRow()]);setMode("manual");}
+  useEffect(()=>{if(externalAction?.kind!==invoiceKind)return;if(externalAction.mode==="new")start();else if(externalAction.mode==="archive")setMode("archive");},[externalAction]);
   async function save(){
     if(lock.current)return;lock.current=true;setBusy(true);
     try{const {data}=await api.post("/paper",{kind:invoiceKind,request_id:requestId.current,seller,rows});await readDocument(data.id);setMode("");}catch(e){failed(e);}finally{lock.current=false;setBusy(false);}
@@ -112,7 +113,7 @@ export function OwnerDocuments({compact=false, invoiceKind="manual"}){
   const newActionCard = "group flex h-[56px] w-[96px] items-center justify-center rounded-lg border border-[var(--gold)]/35 bg-white/[0.025] px-1.5 text-center transition hover:border-[var(--gold)]/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
   const savedActionCard = "group relative mt-4 h-[79px] w-[101px] cursor-pointer border-0 bg-transparent p-0 text-center transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--gold)]";
   return <div className={compact ? "grid justify-items-center gap-4" : "mb-4 flex flex-wrap gap-2"}>
-    {compact ? <>
+    {hideActions ? null : compact ? <>
       <button type="button" onClick={start} className={newActionCard}><span className="flex flex-col items-start leading-none"><span className="text-[8px] font-light tracking-normal text-muted-foreground">{invoiceKind==="custom"?"Custom":"Purchase"}</span><span className="mt-1 font-head text-[11px] font-semibold tracking-normal text-white">INVOICE</span></span><span className={`${invoiceKind==="custom"?"order-first mr-1":"ml-1"} self-center text-[var(--gold)]`}><FilePenLine size={15} strokeWidth={1.25} /></span></button>
       <button type="button" onClick={()=>setMode("archive")} aria-label={invoiceKind==="custom"?"Open saved custom invoices":"Open saved purchase invoices"} className={savedActionCard}>
         <span aria-hidden="true" className="absolute inset-x-[3px] bottom-[5px] top-[13px] rounded-[8px] border border-[#b89754] bg-gradient-to-b from-[#806a3b] to-[#4a3820] shadow-[0_4px_10px_rgba(0,0,0,0.25)]" />
