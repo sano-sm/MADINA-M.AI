@@ -466,3 +466,30 @@ html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-th
 html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c:active {
   transform: scale(.97);
 }
+
+
+/* Approved light shortcut faces on dark Blue/Black home; overview follows theme. */
+html[data-madina-theme="navy"] button.quick-access-c {
+  --qa-edge: #258bd4; --qa-surface: #f5f8fc; --qa-icon: #124e87; --qa-sub: #124e87;
+}
+html[data-madina-theme="black"] button.quick-access-c {
+  --qa-edge: #9ba5b1; --qa-surface: #f5f5f6; --qa-icon: #343b45; --qa-sub: #343b45;
+}
+html:is([data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c .text-white:not([data-testid="alerts-badge"]) { color: #111827; }
+html:is([data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c::before { width: 29px; height: 29px; }
+html:is([data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c > svg { width: 28px; height: 28px; }
+html[data-madina-theme="navy"] [data-testid^="biz-"].card-surface {
+  --home-biz-edge: #258bd4; --home-biz-bg: #f5f8fc; --home-biz-ink: #124e87; --home-biz-label: #172536;
+}
+html[data-madina-theme="black"] [data-testid^="biz-"].card-surface {
+  --home-biz-edge: #9ba5b1; --home-biz-bg: #f5f5f6; --home-biz-ink: #343b45; --home-biz-label: #171717;
+}
+html[data-madina-theme="emerald"] [data-testid^="biz-"].card-surface {
+  --home-biz-edge: #e6c16a; --home-biz-bg: #103d33; --home-biz-ink: #e6c16a; --home-biz-label: #f3f9f4;
+}
+html:is([data-madina-theme="navy"],[data-madina-theme="black"],[data-madina-theme="emerald"]) [data-testid^="biz-"].card-surface {
+  background: var(--home-biz-bg); border: 1.5px solid var(--home-biz-edge); color: var(--home-biz-label);
+}
+html:is([data-madina-theme="navy"],[data-madina-theme="black"],[data-madina-theme="emerald"]) [data-testid^="biz-"].card-surface > svg,
+html:is([data-madina-theme="navy"],[data-madina-theme="black"],[data-madina-theme="emerald"]) [data-testid^="biz-"].card-surface > .font-head { color: var(--home-biz-ink) !important; }
+html:is([data-madina-theme="navy"],[data-madina-theme="black"],[data-madina-theme="emerald"]) [data-testid^="biz-"].card-surface > div:not(.font-head) { color: var(--home-biz-label) !important; }
