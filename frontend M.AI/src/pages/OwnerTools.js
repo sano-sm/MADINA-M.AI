@@ -1,4 +1,4 @@
-import { OwnerDocuments, Restore } from "@/components/TradingDocuments";
+import { Restore } from "@/components/TradingDocuments";
 import React, { useCallback, useEffect, useState } from "react";
 import { api, apiError } from "@/lib/api";
 import { useI18n } from "@/context/I18nContext";
@@ -82,7 +82,6 @@ export default function OwnerTools() {
 
     {!openFolder && <div className="mb-6 grid w-full max-w-3xl grid-cols-3 gap-2 sm:gap-4">
       <OwnerDesktopFolder icon={FolderArchive} title="YEAR ARCHIVES" detail={`${years.length} years`} onClick={() => setOpenFolder("years")} />
-      <OwnerDesktopFolder icon={FilePenLine} title="INVOICES" detail="Invoice folders" onClick={() => setOpenFolder("invoices")} />
       <OwnerDesktopFolder icon={DatabaseBackup} title="FULL BACKUP ZIP" detail="Backup files" onClick={() => setOpenFolder("backup")} small />
     </div>}
 
@@ -164,15 +163,6 @@ export default function OwnerTools() {
             <button type="button" onClick={()=>{const closed=years.filter(y=>y.closed);if(closed.length)setSelectedYear(closed[0].fiscal_year_start);else toast.info("No closed years yet");}} className="flex w-full items-center gap-2 rounded-lg border border-[#667f99] bg-[#1b2e45] p-3 text-left text-sm"><FolderOpen size={18}/> View Closed Years</button>
           </div></div>
         </div>
-      </div>
-    </section>}
-
-    {openFolder === "invoices" && <section className="card-surface mb-5 max-w-3xl rounded-sm p-5">
-      <div className="mb-3"><Btn variant="ghost" onClick={() => setOpenFolder(null)}><ChevronLeft size={15} />Back</Btn></div>
-      <div className="mb-5 flex items-center gap-2"><FolderOpen className="gold-text" /><h2 className="font-head text-lg font-bold text-white">Invoices</h2></div>
-      <div className="grid grid-cols-2 items-start justify-between gap-x-10 gap-y-6 px-1 pt-1 sm:gap-x-24 sm:px-5">
-        <OwnerDocuments compact invoiceKind="manual" />
-        <OwnerDocuments compact invoiceKind="custom" />
       </div>
     </section>}
 
