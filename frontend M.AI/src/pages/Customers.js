@@ -271,18 +271,21 @@ export default function Customers() {
                 <div key={k} className="card-surface rounded-sm p-3"><div className="text-xs text-muted-foreground">{t(k)}</div><div className="gold-text font-bold">{money(v)}</div></div>
               ))}
             </div>
-            <IssuePanel kind="customer" party={detail} />
-            {canReceive && <div className="mb-4 flex justify-end"><Btn data-testid="customer-receive-payment" onClick={() => openPayment()}>{t("receive_payment")}</Btn></div>}
-            <div className="mb-2 flex items-center gap-2">
+            <div className="mb-3 grid gap-2" style={{gridTemplateColumns:canReceive?"repeat(2,minmax(0,1fr))":"minmax(0,1fr)"}}>
+              <div className="customer-top-action"><IssuePanel kind="customer" party={detail} /></div>
+              {canReceive && <div className="customer-top-action"><Btn variant="dark" data-testid="customer-receive-payment" onClick={() => openPayment()}>REC. Payment</Btn></div>}
+            </div>
+            <style>{".customer-top-action{min-width:0}.customer-top-action > button{width:100%;min-width:0;height:48px;box-sizing:border-box;padding:6px 4px;justify-content:center;text-align:center;white-space:normal;font-size:clamp(11px,3.5vw,14px);line-height:1.2}"}</style>
+            <div className="mb-2 flex min-w-0 flex-col gap-1.5">
               <h4 className="font-head font-bold gold-text">{t("sales_history")}</h4>
-              <div className="ms-auto flex min-w-[190px] max-w-sm flex-1 items-center gap-2 rounded-sm border border-border bg-[var(--surface-2)] px-3 py-1.5">
+              <div className="flex w-full min-w-0 items-center gap-2 rounded-sm border border-border bg-[var(--surface-2)] px-3 py-2">
                 <Search size={14} className="shrink-0 text-muted-foreground" />
                 <input
                   data-testid="customer-sales-search"
                   value={salesSearch}
                   onChange={(e) => setSalesSearch(e.target.value)}
                   placeholder="Engine No. / Chassis / Vehicle / Invoice"
-                  className="w-full bg-transparent text-xs text-white outline-none placeholder:text-muted-foreground"
+                  className="w-full min-w-0 bg-transparent text-xs text-white outline-none placeholder:text-muted-foreground"
                 />
                 {salesSearch && <button type="button" onClick={() => setSalesSearch("")} className="text-xs text-muted-foreground hover:text-white">×</button>}
               </div>
