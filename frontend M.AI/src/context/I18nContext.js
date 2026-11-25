@@ -280,6 +280,10 @@ export const useI18n = () => useContext(I18nContext);
 
 export function I18nProvider({ children }) {
   const [lang, setLang] = useState(localStorage.getItem("mtc_lang") || "ur");
+  const [showUrduInEnglish, setShowUrduInEnglish] = useState(() => localStorage.getItem("mai_labels_ur_en") !== "false");
+  const [showEnglishInUrdu, setShowEnglishInUrdu] = useState(() => localStorage.getItem("mai_labels_en_ur") !== "false");
+  useEffect(() => { localStorage.setItem("mai_labels_ur_en", String(showUrduInEnglish)); }, [showUrduInEnglish]);
+  useEffect(() => { localStorage.setItem("mai_labels_en_ur", String(showEnglishInUrdu)); }, [showEnglishInUrdu]);
 
   useEffect(() => {
     const dir = translations[lang].dir;
@@ -296,7 +300,7 @@ export function I18nProvider({ children }) {
   const toggle = () => setLang((l) => (l === "en" ? "ur" : "en"));
 
   return (
-    <I18nContext.Provider value={{ lang, setLang, toggle, t, tOther, dir: translations[lang].dir }}>
+    <I18nContext.Provider value={{ lang, setLang, toggle, t, tOther, showUrduInEnglish, setShowUrduInEnglish, showEnglishInUrdu, setShowEnglishInUrdu, dir: translations[lang].dir }}>
       {children}
     </I18nContext.Provider>
   );
