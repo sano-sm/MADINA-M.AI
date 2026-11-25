@@ -413,3 +413,56 @@ html[data-madina-theme="royal"] [style*="linear-gradient(155deg,#1c1c1f"] { back
   .ct-folder-panel--c .ct-design-art--illustrated { width:52px;height:58px; }
   .ct-design-card { min-height:150px; }
 }
+
+
+/* Home Quick Access only: theme-specific approved shortcut shapes.
+   White and Royal retain the original clipped-corner design. */
+html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c {
+  clip-path: none;
+  border-radius: 12px;
+  border: 1.5px solid var(--qa-edge);
+  background: var(--qa-surface);
+  box-shadow: none;
+  overflow: hidden;
+  color: #f7f9fc;
+}
+html[data-madina-theme="emerald"] button.quick-access-c {
+  --qa-edge: #e6c16a;
+  --qa-surface: #103d33;
+  --qa-icon: #e6c16a;
+  --qa-sub: #70e3b4;
+}
+html[data-madina-theme="emerald"] button.quick-access-c::before { content: none; }
+html[data-madina-theme="navy"] button.quick-access-c {
+  --qa-edge: #38bdf8;
+  --qa-surface: #0c192a;
+  --qa-icon: #f4f8ff;
+  --qa-sub: #67d9ff;
+}
+html[data-madina-theme="black"] button.quick-access-c {
+  --qa-edge: #bfc6d0;
+  --qa-surface: #191b20;
+  --qa-icon: #f5f5f5;
+  --qa-sub: #e0e4eb;
+}
+html:is([data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c::before {
+  top: 0; left: 0; right: auto;
+  width: 23px; height: 23px;
+  background: var(--qa-edge);
+  clip-path: polygon(0 0,100% 0,0 100%);
+}
+html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c > svg {
+  color: var(--qa-icon) !important;
+  stroke-width: 2.2;
+  flex-shrink: 0;
+}
+html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c .text-emerald-400 {
+  color: var(--qa-sub);
+}
+html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c:focus-visible {
+  outline: 2px solid var(--qa-edge);
+  outline-offset: 2px;
+}
+html:is([data-madina-theme="emerald"],[data-madina-theme="navy"],[data-madina-theme="black"]) button.quick-access-c:active {
+  transform: scale(.97);
+}
