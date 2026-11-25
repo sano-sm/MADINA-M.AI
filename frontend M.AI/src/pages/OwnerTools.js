@@ -253,13 +253,14 @@ function TestReset() {
     toast.success("Backup download started. Check the file before continuing.");setStep(4);
   });
   const verifyOwner=()=>run(async()=>{if(screen===owner)throw Error("PINs must differ");await api.post("/owner/pin/verify",{pin:owner},{__noRetry:true});setStep(5);});
-  const finish=()=>run(async()=>{await api.post("/owner/test-reset",{company:status.company,screen_pin:screen,owner_pin:owner,confirmation:"DELETE "+status.company},{__noRetry:true});clear();setVisible(false);toast.success("Test business data deleted");window.location.reload();});
-  if(!status?.enabled)return null;
+  const finish=()=>run(async()=>{if(!status?.enabled)throw Error("Test reset disabled");await api.post("/owner/test-reset",{company:status.company,screen_pin:screen,owner_pin:owner,confirmation:"DELETE "+status.company},{__noRetry:true});clear();setVisible(false);toast.success("Test business data deleted");window.location.reload();});
+  
   return <div className="mt-4 border-t border-border pt-2">
     <div className="flex justify-end"><button type="button" aria-label="Show or hide test reset" disabled={busy} onClick={()=>{clear();setVisible(v=>!v);}} className="p-2 text-muted-foreground"><Eye size={15}/></button></div>
     {visible&&<div className="space-y-3 rounded-xl border border-red-700 p-3">
-      <h3 className="font-bold text-red-400">Test Data Reset · {status.company}</h3>
-      {step===0&&<Btn variant="dark" onClick={()=>setStep(1)}>Delete Test Business Data</Btn>}
+      <h3 className="font-bold text-red-400">Test Data Reset · {status?.company || '—'}</h3>
+      {!status?.enabled && <p className="text-sm text-muted-foreground">Reset is locked. Available only on an authorized test database. · ڈیلیٹ صرف مجاز ٹیسٹ ڈیٹابیس پر فعال ہوگا۔</p>}
+      {step===0&&<Btn variant="dark" disabled={!status?.enabled} onClick={()=>{if(status?.enabled)setStep(1);}}>Delete Test Business Data</Btn>}
       {step===1&&<><p>All business records for {status.company} will be deleted. منتخب کمپنی کا کاروباری ڈیٹا ختم ہوگا۔</p><Btn onClick={()=>setStep(2)}>Confirm</Btn></>}
       {step===2&&<><label>Screen PIN</label><input type="password" inputMode="numeric" autoComplete="off" value={screen} onChange={e=>setScreen(e.target.value)} className="w-full rounded border border-border bg-transparent p-2"/><Btn disabled={busy||!screen} onClick={verifyScreen}>OK</Btn></>}
       {step===3&&<><p>Optional Backup · بیک اپ اختیاری ہے</p><div className="flex flex-wrap gap-2"><Btn disabled={busy} onClick={backup}><Download size={16}/> Download Backup</Btn><Btn disabled={busy} variant="dark" onClick={()=>setStep(4)}>Skip Backup</Btn></div></>}
