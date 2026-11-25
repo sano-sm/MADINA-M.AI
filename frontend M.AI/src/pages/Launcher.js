@@ -40,6 +40,73 @@ const APPS = [
   { key: "container_tt", route: "/container", icon: Container, perm: "finance.view", color: GOLD },
 ];
 
+const APP_LABELS = {
+  "purchases": [
+    "Purchases",
+    "خریداری"
+  ],
+  "parts_inventory": [
+    "Parts Inventory",
+    "پرزوں کا ذخیرہ"
+  ],
+  "vehicles": [
+    "Vehicles",
+    "گاڑیاں"
+  ],
+  "parts_sales": [
+    "Parts Sales",
+    "پرزوں کی فروخت"
+  ],
+  "vehicle_sales": [
+    "Vehicle Sales",
+    "گاڑیوں کی فروخت"
+  ],
+  "expenses": [
+    "Expenses & Shipping",
+    "اخراجات و شپنگ"
+  ],
+  "stock_overview": [
+    "Stock Overview",
+    "اسٹاک کا جائزہ"
+  ],
+  "summary": [
+    "Summary",
+    "خلاصہ"
+  ],
+  "allocations": [
+    "Allocations",
+    "تقسیم"
+  ],
+  "customers": [
+    "Customers",
+    "گاہک"
+  ],
+  "loans": [
+    "Loans / Udhaar",
+    "قرض و ادھار"
+  ],
+  "brokers": [
+    "Brokers",
+    "بروکرز"
+  ],
+  "invoices": [
+    "Invoices",
+    "انوائس"
+  ],
+  "alerts": [
+    "Alerts",
+    "اطلاعات"
+  ],
+  "settings": [
+    "Settings",
+    "ترتیبات"
+  ],
+  "container_tt": [
+    "Container & TT",
+    "کنٹینر اور ٹی ٹی"
+  ]
+};
+
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function Launcher() {
@@ -153,7 +220,7 @@ export default function Launcher() {
             {apps.map((a) => (
               <button key={a.key} data-testid={`menu-${a.key}`} onClick={() => openApp(a)}
                 className="flex items-center gap-2 rounded-lg px-2 py-2 text-xs text-white hover:bg-white/10">
-                <a.icon size={16} style={{ color: a.color }} />{a.key === "invoices" ? "Invoices" : t(a.key)}
+                <a.icon size={16} style={{ color: a.color }} />{APP_LABELS[a.key]?.[lang === "ur" ? 1 : 0] || t(a.key)}
               </button>
             ))}
           </div>
@@ -208,9 +275,9 @@ export default function Launcher() {
               <span data-testid="alerts-badge" className="absolute end-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">{alertCount}</span>
             )}
             <a.icon size={22} style={{ color: a.color }} strokeWidth={1.7} />
-            <div className="text-center leading-tight">
-              <div className="text-[10px] font-semibold text-white sm:text-[11px]">{a.key === "expenses" ? "Expenses & Shipping" : a.key === "invoices" ? "Invoices" : t(a.key)}</div>
-              <div className="text-[9px] font-semibold text-emerald-400">{a.key === "invoices" ? "انوائس" : tOther(a.key)}</div>
+            <div className="w-full min-w-0 text-center">
+              <div lang="en" dir="ltr" className="text-[10px] font-bold leading-tight text-white sm:text-[11px]">{APP_LABELS[a.key][0]}</div>
+              <div lang="ur" dir="rtl" className="mt-0.5 text-[11px] font-bold leading-[1.85] text-emerald-400 sm:text-xs" style={{fontFamily:'"Noto Nastaliq Urdu", "Noto Naskh Arabic", serif'}}>{APP_LABELS[a.key][1]}</div>
             </div>
           </button>
         ))}
