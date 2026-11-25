@@ -19,6 +19,7 @@ import VehicleSales from "@/pages/VehicleSales";
 import ExpensesSalary from "@/pages/ExpensesSalary";
 import Funds from "@/pages/Funds";
 import OwnerTools from "@/pages/OwnerTools";
+import Invoices from "@/pages/Invoices";
 import Reports from "@/pages/Reports";
 import Audit from "@/pages/Audit";
 import Alerts from "@/pages/Alerts";
@@ -95,7 +96,8 @@ function AppRoutes() {
       <Route path="/alerts" element={<Protected perm="dashboard.view"><Alerts /></Protected>} />
       <Route path="/recovery" element={<Protected perm="parts.view"><Recovery /></Protected>} />
       <Route path="/allocations" element={<Protected perm="finance.view"><Allocations /></Protected>} />
-      <Route path="/empty/users" element={<Protected perm="settings.view"><ReservedEmptyPage name="Users — Free Folder" /></Protected>} />
+      <Route path="/empty/users" element={<Navigate to="/invoices" replace />} />
+      <Route path="/invoices" element={<Protected perm="settings.manage"><Invoices /></Protected>} />
       <Route path="/empty/summary" element={<Protected perm="reports.view"><ReservedEmptyPage name="Summary — Free Folder" /></Protected>} />
       <Route path="/summary" element={<Protected perm="reports.view"><Summary /></Protected>} />
       <Route path="/brokers" element={<Protected perm="finance.view"><Brokers /></Protected>} />
