@@ -3037,6 +3037,48 @@ async def export_csv(entity: str, request: Request):
     cid = current_company.get()
     flt = {"company_id": cid} if entity in PER_COMPANY_COLLECTIONS else {}
     rows = await db[entity].find(flt, {"_id": 0}).to_list(20000)
+    if request.query_params.get("format") == "pdf":
+        user = await get_current_user(request)
+        if "reports.view" not in user.get("permissions", []):
+            raise HTTPException(status_code=403, detail="Permission denied")
+        from xml.sax.saxutils import escape
+        settings = await sdb.settings.find_one({"id": settings_id()}, {"_id": 0}) or {}
+        out = BytesIO()
+        doc = SimpleDocTemplate(out, pagesize=A4, rightMargin=32, leftMargin=32, topMargin=36, bottomMargin=36)
+        styles = getSampleStyleSheet()
+        body = ParagraphStyle("RecordBody", parent=styles["Normal"], fontSize=9, leading=12, splitLongWords=True)
+        def para(value):
+            return Paragraph(escape(str(value if value is not None else "")).replace("\n", "<br/>"), body)
+        title = {"tracked_parts": "Engine / Half Cut", "scrap_allocations": "Scrap", "shokubai_allocations": "Shokubai", "parts": "Spare Parts"}.get(entity, entity.replace("_", " ").title())
+        story = [Paragraph(escape(str(settings.get("name") or cid)), styles["Title"]),
+                 Paragraph(escape(title + " Report — " + cid), styles["Heading2"]),
+                 para("Generated: " + now_iso()[:10] + " | Records: " + str(len(rows))), Spacer(1, 12)]
+        if not rows:
+            story.append(para("No records found."))
+        for i, row in enumerate(rows, 1):
+            story.append(Paragraph("Record " + str(i), styles["Heading3"]))
+            cells = []
+            fields = cols[entity]
+            for j in range(0, len(fields), 2):
+                line = []
+                for c in fields[j:j+2]:
+                    label = c.replace("_", " ").title().replace("Id", "ID")
+                    value = row.get(c, "")
+                    if c == "status":
+                        value = str(value).replace("_", " ").title()
+                    line.extend([para(label), para(value)])
+                if len(line) == 2:
+                    line.extend(["", ""])
+                cells.append(line)
+            table = Table(cells, colWidths=[100, doc.width/2-100, 100, doc.width/2-100])
+            table.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "TOP"), ("GRID", (0,0), (-1,-1), 0.35, colors.HexColor("#CBD5E1")), ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#F1F5F9")), ("BACKGROUND", (2,0), (2,-1), colors.HexColor("#F1F5F9")), ("TOPPADDING", (0,0), (-1,-1), 5), ("BOTTOMPADDING", (0,0), (-1,-1), 5)]))
+            story.extend([table, Spacer(1, 10)])
+        def footer(canvas, document):
+            canvas.setFont("Helvetica", 8)
+            canvas.drawRightString(A4[0]-32, 20, "Page " + str(document.page))
+        doc.build(story, onFirstPage=footer, onLaterPages=footer)
+        out.seek(0)
+        return StreamingResponse(out, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{cid}-{entity}.pdf"'})
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(cols[entity])
