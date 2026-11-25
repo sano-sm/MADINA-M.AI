@@ -761,6 +761,63 @@ async def owner_pin_verify(body: PinIn, user: dict = Depends(get_current_user)):
     return {"ok": True}
 
 
+# Destructive reset is deliberately disabled unless the deployment explicitly
+# identifies its isolated test database. Never enable on production.
+class TestResetIn(BaseModel):
+    company: str
+    screen_pin: str
+    owner_pin: str
+    confirmation: str
+
+def _test_reset_enabled():
+    name = os.environ.get("DB_NAME", "")
+    return (os.environ.get("ENABLE_TEST_RESET") == "true"
+            and name.startswith("mai_test_")
+            and os.environ.get("TEST_RESET_DB_NAME") == name)
+
+async def _reset_owner(user):
+    owner = await get_owner()
+    if not owner or user.get("id") != owner.get("id") or "settings.manage" not in user.get("permissions", []):
+        raise HTTPException(403, "Owner only")
+    return owner
+
+@api.get("/owner/test-reset/status")
+async def test_reset_status(user: dict = Depends(get_current_user)):
+    await _reset_owner(user)
+    return {"enabled": _test_reset_enabled(), "company": current_company.get()}
+
+@api.post("/owner/test-reset")
+async def test_reset(body: TestResetIn, user: dict = Depends(get_current_user)):
+    owner = await _reset_owner(user)
+    if not _test_reset_enabled():
+        raise HTTPException(403, "Reset disabled outside explicitly configured test database")
+    cid = current_company.get()
+    if body.company != cid or cid not in VALID_COMPANIES or body.confirmation != "DELETE " + cid:
+        raise HTTPException(400, "Company confirmation mismatch")
+    if not owner.get("pin_hash") or not owner.get("owner_tools_pin_hash"):
+        raise HTTPException(400, "Configure both PINs first")
+    if body.screen_pin == body.owner_pin:
+        raise HTTPException(400, "PINs must be different")
+    # Existing verification functions enforce lockouts and check actual hashes.
+    await pin_verify(PinIn(pin=body.screen_pin))
+    await owner_pin_verify(PinIn(pin=body.owner_pin), user)
+    from pymongo.errors import PyMongoError
+    collections = (PER_COMPANY_COLLECTIONS | {"customer_delivery_status"}) - {"ai_agents", "audit_logs"}
+    async def apply(session):
+        await db.restore_locks.update_one({"_id":cid},{"$inc":{"generation":1}},upsert=True,session=session)
+        counts = {}
+        for coll in sorted(collections):
+            result = await db[coll].delete_many({"company_id":cid},session=session)
+            counts[coll] = result.deleted_count
+        await db.audit_logs.insert_one({"id":new_id(),"company_id":cid,"user_id":user["id"],"user_name":user["name"],"action":"reset","entity":"test_data","details":"Test business reset","timestamp":now_iso()},session=session)
+        return counts
+    try:
+        async with await client.start_session() as session:
+            counts = await session.with_transaction(apply)
+    except PyMongoError as exc:
+        raise HTTPException(409, "Reset not committed or outcome uncertain. Check database before retrying; transaction support required.") from exc
+    return {"company":cid,"deleted":counts}
+
 @api.post("/auth/pin/forgot")
 async def pin_forgot(body: PinForgotIn):
     owner = await get_owner()
