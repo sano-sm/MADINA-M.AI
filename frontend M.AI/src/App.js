@@ -12,6 +12,7 @@ import VoiceCommand from "@/components/VoiceCommand";
 import Login from "@/pages/Login";
 import Launcher from "@/pages/Launcher";
 import Dashboard from "@/pages/Dashboard";
+import SummaryDashboard from "@/pages/SummaryDashboard";
 import Vehicles from "@/pages/Vehicles";
 import Parts from "@/pages/Parts";
 import Customers from "@/pages/Customers";
@@ -98,7 +99,7 @@ function AppRoutes() {
       <Route path="/allocations" element={<Protected perm="finance.view"><Allocations /></Protected>} />
       <Route path="/empty/users" element={<Navigate to="/invoices" replace />} />
       <Route path="/invoices" element={<Protected perm="settings.manage"><Invoices /></Protected>} />
-      <Route path="/empty/summary" element={<Protected perm="reports.view"><ReservedEmptyPage name="Summary — Free Folder" /></Protected>} />
+      <Route path="/empty/summary" element={<Protected perm="reports.view"><SummaryDashboard /></Protected>} />
       <Route path="/summary" element={<Protected perm="reports.view"><Summary /></Protected>} />
       <Route path="/brokers" element={<Protected perm="finance.view"><Brokers /></Protected>} />
       <Route path="/loans" element={<Protected perm="reports.view"><Loans /></Protected>} />
