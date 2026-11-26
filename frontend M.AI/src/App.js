@@ -29,6 +29,7 @@ import Allocations from "@/pages/Allocations";
 import Summary from "@/pages/Summary";
 import Brokers from "@/pages/Brokers";
 import Loans from "@/pages/Loans";
+import Records from "@/pages/Records";
 import Stock from "@/pages/Stock";
 import Purchases from "@/pages/Purchases";
 import Settings from "@/pages/Settings";
@@ -102,6 +103,7 @@ function AppRoutes() {
       <Route path="/empty/summary" element={<Protected perm="reports.view"><SummaryDashboard /></Protected>} />
       <Route path="/summary" element={<Protected perm="reports.view"><Summary /></Protected>} />
       <Route path="/brokers" element={<Protected perm="finance.view"><Brokers /></Protected>} />
+      <Route path="/records" element={<Protected perm="reports.view"><Records /></Protected>} />
       <Route path="/loans" element={<Protected perm="reports.view"><Loans /></Protected>} />
       <Route path="/stock" element={<Protected perm="reports.view"><Stock /></Protected>} />
       <Route path="/purchases" element={<Protected perm="reports.view"><Purchases /></Protected>} />
