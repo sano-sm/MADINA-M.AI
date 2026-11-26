@@ -1,0 +1,81 @@
+.ca-account {
+  color: #103a30;
+  background: linear-gradient(145deg,#f6fbfa 0%,#edf5f3 100%);
+  border-radius: 19px;
+  overflow: hidden;
+  border: 1px solid #d6e9e2;
+  box-shadow: 0 10px 26px #00000017;
+  direction: ltr;
+  text-align: left;
+  max-width: 100%;
+}
+.ca-account * { box-sizing: border-box; }
+.ca-brand {
+  background: linear-gradient(100deg,#005b41,#00704d);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.ca-brand strong { font-size: 18px; font-weight: 650; }
+.ca-brand span { color: #dfc878; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.ca-body { padding: 18px 20px 30px; }
+.ca-heading h2 { font-size: 20px; font-weight: 650; color: #19443a; margin: 0 0 3px; }
+.ca-heading p { color: #41645b; font-size: 12px; margin: 0 0 14px; }
+.ca-heading p span { padding: 0 8px; color: #778f86; }
+.ca-totals { display: grid; grid-template-columns: 1.05fr 1.2fr 1.2fr 1.2fr; gap: 10px; margin-bottom: 18px; }
+.ca-metric {
+  min-width: 0;
+  padding: 12px 13px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 12px #073c2810;
+  border: 1px solid #ecf0ef;
+}
+.ca-metric-label { font-size: 10px; line-height: 1.2; color: #2a4b43; font-weight: 650; margin-bottom: 11px; }
+.ca-amount > strong { color: #243d37; font-size: clamp(15px,2vw,23px); letter-spacing: -.025em; white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ca-amount > strong.ca-blue { color: #2462c5; }
+.ca-amount > strong.ca-red { color: #d52731; }
+.ca-count-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); text-align: center; }
+.ca-count-grid > div { min-width: 0; border-right: 1px solid #e2e8e5; padding: 0 3px; }
+.ca-count-grid > div:last-child { border-right: 0; }
+.ca-count-grid span { display: block; font-size: 9px; color: #37584f; white-space: nowrap; font-weight: 600; }
+.ca-count-grid strong { color: #163e34; display: block; font-size: 23px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.ca-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 11px; }
+.ca-toolbar label { font-size: 13px; font-weight: 700; }
+.ca-toolbar select { color: #18483d; background: #fff; border: 1px solid #c9ded5; padding: 8px 12px; border-radius: 7px; min-width: 120px; }
+.ca-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #fff; color: #0c6849; border: 1px solid #9ec7b9; border-radius: 7px; font-size: 12px; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+.ca-btn-primary { background: #006448; color: #fff; border-color: #006448; }
+.ca-btn:disabled { opacity: .45; cursor: not-allowed; }
+.ca-icon-btn { display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #396255; border: 1px solid #c9ded5; border-radius: 7px; padding: 8px; cursor: pointer; }
+.ca-table-scroll { width: 100%; overflow-x: auto; border-radius: 5px; background: #fff; border: 1px solid #e5ebe8; }
+.ca-table { width: 100%; min-width: 1160px; border-collapse: collapse; background: white; color: #20372f; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ca-table th { background: #006a4a; color: #fff; text-align: left; font-size: 11px; font-weight: 650; padding: 11px 9px; white-space: nowrap; }
+.ca-table td { border-bottom: 1px solid #e2e9e6; padding: 8px 9px; font-size: 12px; vertical-align: middle; white-space: nowrap; }
+.ca-table tbody tr:nth-child(even) { background: #f8fbfa; }
+.ca-table tbody tr:hover { background: #eff8f3; }
+.ca-table th:nth-child(1) { min-width: 100px; }
+.ca-table th:nth-child(2) { min-width: 88px; }
+.ca-table th:nth-child(3) { min-width: 107px; }
+.ca-table th:nth-child(4) { min-width: 155px; }
+.ca-table th:nth-child(5) { min-width: 145px; }
+.ca-table th:nth-child(6), .ca-table th:nth-child(7), .ca-table th:nth-child(8) { min-width: 164px; }
+.ca-table th:nth-child(9) { min-width: 120px; }
+.ca-table input, .ca-table select { width: 100%; min-width: 84px; max-width: 200px; background: white; color: #122f25; border: 1px solid #bed5cd; border-radius: 4px; padding: 7px 6px; outline-color: #08764d; font-size: 12px; }
+.ca-table input[type="date"] { min-width: 116px; }
+.ca-money-cell { font-weight: 650; }
+.ca-red { color: #d52731; font-weight: 750; }
+.ca-blue { color: #2462c5; font-weight: 750; }
+.ca-action-buttons { display: flex; gap: 6px; align-items: center; }
+.ca-action-buttons button { display: inline-flex; background: #e5f0eb; border-radius: 4px; color: #146449; padding: 6px; cursor: pointer; }
+.ca-action-buttons button:disabled { opacity: .5; cursor: not-allowed; }
+.ca-empty { color: #6c8980; text-align: center; padding: 28px 10px !important; white-space: normal !important; }
+.ca-footnote { color: #748e84; margin: 12px 0 0; font-size: 11px; line-height: 1.5; }
+.ct-account-folder-entry { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 112px; color: #d4af37; border: 1px solid #b99d51; background: #14231dd9; border-radius: 9px; padding: 13px; cursor: pointer; width: 100%; }
+.ct-account-folder-entry span { font-weight: 700; font-size: 18px; letter-spacing: .02em; }
+.ct-account-folder-entry::before, .ct-account-folder-entry::after { content: ""; display: block; background: #d4af37; height: 2px; width: 90%; max-width: 260px; }
+.ct-account-folder-entry:hover, .ct-account-folder-entry[aria-pressed="true"] { background: #274134; border-color: #f0d27e; }
+@media(max-width: 900px) { .ca-totals { grid-template-columns: repeat(2,minmax(0,1fr)); } .ca-amount > strong { font-size: clamp(16px,4vw,25px); } }
+@media(max-width: 480px) { .ca-body { padding: 13px 10px 24px; } .ca-brand { padding: 13px; } .ca-brand strong { font-size: 16px; } .ca-totals { gap: 7px; } .ca-metric { padding: 9px; } .ca-metric-label { font-size: 9px; } .ca-count-grid span { font-size: 8px; } .ca-count-grid strong { font-size: 19px; } .ca-heading h2 { font-size: 18px; } .ca-amount > strong { font-size: clamp(15px,4vw,20px); } .ca-btn { padding: 7px 9px; } }
