@@ -243,11 +243,11 @@ function BrokerDetail({ detail, setDetail, reload, editable }) {
       <Modal open={!!veh} onClose={() => setVeh(null)} title={t("add")} testid="bv-add-modal">
         {veh && (<div>
           <Field label={t("date")}><Input type="date" value={veh.purchase_date} onChange={(e) => setVeh({ ...veh, purchase_date: e.target.value })} /></Field>
-          <Field label={t("vehicle_name")}><NameSuggestInput kind="vehicle" data-testid="bv-name" value={veh.vehicle_name} onChange={(e) => setVeh({ ...veh, vehicle_name: e.target.value })} /></Field>
+          <Field label={t("vehicle_name")}><NameSuggestInput kind="vehicle" data-testid="bv-name" value={veh.vehicle_name} onChange={(e) => setVeh({ ...veh, vehicle_name: e.target.value.toUpperCase() })} /></Field>
           <Field label={t("purchase_price")}><Input type="number" data-testid="bv-price" value={veh.purchase_price} onChange={(e) => setVeh({ ...veh, purchase_price: e.target.value })} /></Field>
           <Field label={t("paid")}><Input type="number" value={veh.paid_amount} onChange={(e) => setVeh({ ...veh, paid_amount: e.target.value })} /></Field>
           <Field label={t("payment_method")}><select value={veh.payment_method || "bank"} onChange={(e) => setVeh({ ...veh, payment_method: e.target.value })} disabled={(+veh.paid_amount || 0) <= 0} className="w-full rounded-sm border border-input bg-[var(--surface-2)] px-3 py-2 text-sm text-white outline-none"><option value="cash">{t("cash")}</option><option value="bank">{t("bank")}</option></select></Field>
-          <Field label={t("chassis")}><Input value={veh.chassis_number} onChange={(e) => setVeh({ ...veh, chassis_number: e.target.value })} /></Field>
+          <Field label={t("chassis")}><Input value={veh.chassis_number} onChange={(e) => setVeh({ ...veh, chassis_number: e.target.value.toUpperCase() })} /></Field>
           {veh.id && <Field label="Broker"><select value={veh.broker_id||detail.id} onChange={(e)=>setVeh({...veh,broker_id:e.target.value})} className="w-full rounded-sm border border-input bg-[var(--surface-2)] px-3 py-2 text-sm text-white">{brokers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>}
           <div className="mt-2 flex justify-end gap-2"><Btn variant="dark" onClick={() => setVeh(null)}>{t("cancel")}</Btn><Btn data-testid="save-bv" onClick={addVehicle}>{t("save")}</Btn></div>
         </div>)}
