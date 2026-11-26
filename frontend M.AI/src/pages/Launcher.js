@@ -32,7 +32,7 @@ const APPS = [
   { key: "summary", route: "/empty/summary", icon: CalendarRange, perm: "reports.view", color: GOLD },
   { key: "allocations", route: "/allocations", icon: Recycle, perm: "finance.view", color: GOLD },
   { key: "customers", route: "/customers", icon: Users, perm: "customers.view", color: GOLD },
-  { key: "loans", route: "/loans", icon: Landmark, perm: "reports.view", color: GOLD },
+  { key: "loans", route: "/records", icon: Landmark, perm: "reports.view", color: GOLD },
   { key: "brokers", route: "/brokers", icon: Contact, perm: "finance.view", color: GOLD },
   { key: "invoices", route: "/invoices", icon: Receipt, perm: "settings.manage", color: GOLD },
   { key: "alerts", route: "/alerts", icon: Bell, perm: "dashboard.view", color: GOLD, badge: true },
@@ -82,8 +82,8 @@ const APP_LABELS = {
     "گاہک"
   ],
   "loans": [
-    "Loans / Udhaar",
-    "قرض و ادھار"
+    "Records",
+    "ریکارڈ"
   ],
   "brokers": [
     "Brokers",
