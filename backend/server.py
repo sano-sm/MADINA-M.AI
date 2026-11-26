@@ -3205,7 +3205,16 @@ async def export_csv(entity: str, request: Request):
 @api.get("/dashboard")
 async def dashboard(user: dict = Depends(require("dashboard.view"))):
     active_start = await _operating_period_start()
-    pnl = await compute_pnl(start=active_start)
+    # Use the same operating summary as Purchases and Sales, not the older
+    # invoice-only P&L. Document archives and Container & TT are not inputs.
+    period = await summarize(active_start, now_iso()[:10])
+    pnl = {"sales_revenue": period["total_sales"],
+           "tax_collected": period.get("included_tax", 0),
+           "cogs": period["cogs"],
+           "gross_profit": round(period["total_sales"] - period["cogs"], 2),
+           "expenses": round(period["total_expenses"] - period["salaries"], 2),
+           "salaries": period["salaries"],
+           "net_profit": period["net_profit"]}
     stock = await compute_stock_valuation()
     vehicles_in = await sdb.vehicles.count_documents({"status": "in_stock"})
     vehicles_sold = await sdb.vehicles.count_documents({"status": {"$in": ["sold", "sold_complete"]}})
@@ -3217,9 +3226,8 @@ async def dashboard(user: dict = Depends(require("dashboard.view"))):
     outstanding = sum(max(b["outstanding"], 0) for b in balances.values())
     recent = await sdb.audit_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(8)
     today = now_iso()[:10]
-    today_invoices = await sdb.invoices.find({"created_at": {"$gte": today}}, {"_id": 0}).to_list(2000)
-    today_sales = sum(i.get("total", i.get("subtotal", 0)) for i in today_invoices)
-    today_sales += sum(v.get("sale_price", 0) for v in await sdb.vehicles.find({"status": "sold_complete", "invoice_id": {"$in": [None, ""]}, "sale_date": today}, {"_id": 0, "sale_price": 1}).to_list(2000))
+    today_summary = await summarize(today, today)
+    today_sales = today_summary["total_sales"]
     today_pays = await sdb.payments.find({"created_at": {"$gte": today}}, {"_id": 0}).to_list(2000)
     today_payments = sum(p["amount"] for p in today_pays)
     low_stock_count = await sdb.parts.count_documents({"quantity": {"$lte": 3}})
