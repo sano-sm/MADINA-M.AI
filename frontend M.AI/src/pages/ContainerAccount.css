@@ -79,3 +79,15 @@
 .ct-account-folder-entry:hover, .ct-account-folder-entry[aria-pressed="true"] { background: #274134; border-color: #f0d27e; }
 @media(max-width: 900px) { .ca-totals { grid-template-columns: repeat(2,minmax(0,1fr)); } .ca-amount > strong { font-size: clamp(16px,4vw,25px); } }
 @media(max-width: 480px) { .ca-body { padding: 13px 10px 24px; } .ca-brand { padding: 13px; } .ca-brand strong { font-size: 16px; } .ca-totals { gap: 7px; } .ca-metric { padding: 9px; } .ca-metric-label { font-size: 9px; } .ca-count-grid span { font-size: 8px; } .ca-count-grid strong { font-size: 19px; } .ca-heading h2 { font-size: 18px; } .ca-amount > strong { font-size: clamp(15px,4vw,20px); } .ca-btn { padding: 7px 9px; } }
+
+.ca-fullscreen { position: fixed; inset: 0; z-index: 1000; background: #edf5f3; overflow: auto; padding: 8px; padding-top: max(8px, env(safe-area-inset-top)); }
+.ca-fullscreen .ca-account { min-height: calc(100dvh - 55px); border-radius: 8px; }
+.ca-back { color: #006448; background: transparent; font-weight: 700; padding: 8px 12px; }
+.ca-table { min-width: 0; width: max-content; min-width: 100%; }
+.ca-table th, .ca-table td { padding: 6px 5px; font-size: 11px; }
+.ca-table th:nth-child(n) { min-width: 0; }
+.ca-table th:nth-child(6), .ca-table th:nth-child(7), .ca-table th:nth-child(9) { min-width: 100px; }
+.ca-table input, .ca-table select { min-width: 65px; max-width: 115px; padding: 5px 3px; }
+.ca-table input[type="date"] { min-width: 105px; }
+.ca-table th:nth-child(8), .ca-table th:nth-child(10) { min-width: 105px; }
+.ca-table th:nth-child(4), .ca-table th:nth-child(5) { min-width: 95px; }
