@@ -2986,7 +2986,7 @@ async def stock_value_asof(asof):
     """Point-in-time inventory value at COST (unsold only)."""
     hi = asof + "T23:59:59"
     total = 0.0
-    vs = await sdb.vehicles.find({"purchase_date": {"$lte": hi}}, {"_id": 0}).to_list(50000)
+    vs = await sdb.vehicles.find({"$or": [{"purchase_date": {"$lte": hi}}, {"purchase_date": {"$in": [None, ""]}, "created_at": {"$lte": hi}}]}, {"_id": 0}).to_list(50000)
     for v in vs:
         pp = v.get("purchase_price", 0)
         if v.get("status") in ("sold", "sold_complete") and (v.get("sale_date") or "") <= hi:
@@ -2999,8 +2999,19 @@ async def stock_value_asof(asof):
         if t.get("status") == "sold" and (t.get("sale_date") or "") <= hi:
             continue
         total += t.get("purchase_price", 0)
-    for p in await sdb.parts.find({"created_at": {"$lte": hi}}, {"_id": 0, "unit_cost": 1, "quantity": 1}).to_list(50000):
-        total += p.get("unit_cost", 0) * p.get("quantity", 0)
+    # Reconstruct earlier stock by adding back subsequent invoice sales.
+    # Current quantity is the authoritative remaining quantity.
+    later_sales = {}
+    async for inv in sdb.invoices.find({"created_at": {"$gt": hi}}, {"_id": 0, "items": 1}):
+        for item in inv.get("items", []):
+            if item.get("item_type") == "part" and item.get("ref_id"):
+                rid = item["ref_id"]
+                later_sales[rid] = later_sales.get(rid, 0) + int(item.get("quantity") or 0)
+    async for p in sdb.parts.find({"source_vehicle_id": {"$in": [None, ""]}}, {"_id": 0}):
+        purchased = p.get("purchase_date") or p.get("created_at")
+        if purchased and purchased <= hi:
+            qty = max(0, p.get("quantity", 0) + later_sales.get(p["id"], 0))
+            total += p.get("unit_cost", 0) * qty
     return round(total, 2)
 
 
@@ -3008,7 +3019,7 @@ async def compute_stock_valuation():
     asof = now_iso()[:10]
     veh = await sdb.vehicles.find({"status": "in_stock"}, {"_id": 0, "purchase_price": 1}).to_list(50000)
     veh_value = sum(v.get("purchase_price", 0) for v in veh)
-    parts = await sdb.parts.find({}, {"_id": 0, "unit_cost": 1, "quantity": 1}).to_list(50000)
+    parts = await sdb.parts.find({"source_vehicle_id": {"$in": [None, ""]}}, {"_id": 0, "unit_cost": 1, "quantity": 1}).to_list(50000)
     parts_value = sum(p.get("unit_cost", 0) * p.get("quantity", 0) for p in parts)
     standalone = await sdb.tracked_parts.find({"source": "direct", "status": "available"}, {"_id": 0, "purchase_price": 1}).to_list(50000)
     standalone_value = sum(t.get("purchase_price", 0) for t in standalone)
@@ -3700,7 +3711,7 @@ async def summarize(start, end):
     hi = end + "T23:59:59"
     def rng(f):
         return {f: {"$gte": start, "$lte": hi}}
-    pv = await sdb.vehicles.find({"purchase_date": {"$gte": start, "$lte": hi}}, {"_id": 0, "purchase_price": 1}).to_list(20000)
+    pv = await sdb.vehicles.find({"$or": [{"purchase_date": {"$gte": start, "$lte": hi}}, {"purchase_date": {"$in": [None, ""]}, "created_at": {"$gte": start, "$lte": hi}}]}, {"_id": 0, "purchase_price": 1}).to_list(20000)
     complete = await sdb.vehicles.find({"status": {"$in": ["sold", "sold_complete"]}, "sale_date": {"$gte": start, "$lte": hi}}, {"_id": 0}).to_list(20000)
     complete_sales = sum(v.get("sale_price", 0) for v in complete)
     complete_recv = sum(v.get("amount_received", 0) for v in complete if not v.get("invoice_id"))
