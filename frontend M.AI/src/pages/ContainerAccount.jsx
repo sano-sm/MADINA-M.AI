@@ -8,7 +8,7 @@ import "./ContainerAccount.css";
 // This ledger uses ONLY /container-account, never existing invoice, TT or business APIs.
 const blank = () => ({
   date: "", company: "MTC", destination: "UAE", container_no: "",
-  invoice_no: "", container_amount: "", received_amount: "", surrender_date: ""
+  invoice_no: "", container_amount: "", received_amount: "", tt_date: "", surrender_date: ""
 });
 const formatYen = (n) => "¥" + Number(n || 0).toLocaleString("en-US", {
   minimumFractionDigits: Number(n || 0) % 1 ? 2 : 0,
@@ -19,11 +19,11 @@ const netOf = (r) => Math.round((asAmount(r.container_amount) - asAmount(r.recei
 
 const headings = [
   "Date", "Company", "Destination", "Container No.", "Invoice No.",
-  "Container Amount", "Received Amount", "Balance Due / Overpaid", "Surrender Date"
+  "Container Amount", "TT Amount", "TT Date", "Balance Due / Overpaid", "Surrender Date"
 ];
 const fieldNames = [
   "date", "company", "destination", "container_no", "invoice_no",
-  "container_amount", "received_amount", "balance", "surrender_date"
+  "container_amount", "received_amount", "tt_date", "balance", "surrender_date"
 ];
 
 function EditCell({ field, record, onChange }) {
@@ -42,7 +42,7 @@ function EditCell({ field, record, onChange }) {
     </select>;
   }
   const monetary = field === "container_amount" || field === "received_amount";
-  const dateField = field === "date" || field === "surrender_date";
+  const dateField = field === "date" || field === "surrender_date" || field === "tt_date";
   return <input
     aria-label={headings[fieldNames.indexOf(field)]}
     type={monetary ? "number" : dateField ? "date" : "text"}
@@ -253,7 +253,7 @@ export default function ContainerAccount() {
         <table className="ca-table" dir="ltr">
           <thead><tr>{headings.map((h) => <th key={h}>{h}</th>)}<th>Action</th></tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={10} className="ca-empty">Loading container account...</td></tr> : null}
+            {loading ? <tr><td colSpan={11} className="ca-empty">Loading container account...</td></tr> : null}
             {!loading && entries.map((entry) => <DataRow key={entry.id} record={entry}
               editable={editable} onSave={saveRow} onDelete={removeRow} />)}
             {!loading && showEntry && editable &&
@@ -271,7 +271,7 @@ export default function ContainerAccount() {
                 </td>
               </tr>}
             {!loading && !entries.length && !showEntry &&
-              <tr><td colSpan={10} className="ca-empty">No containers in this sheet. Use Add Container to enter the first one.</td></tr>}
+              <tr><td colSpan={11} className="ca-empty">No containers in this sheet. Use Add Container to enter the first one.</td></tr>}
           </tbody>
         </table>
       </div>
