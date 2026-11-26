@@ -47,6 +47,7 @@ current_company: ContextVar[str] = ContextVar("current_company", default=DEFAULT
 
 # Collections whose documents belong to exactly one company and must be isolated.
 PER_COMPANY_COLLECTIONS = {
+    "deal_sheets", "deal_records",
     "vehicles", "parts", "tracked_parts", "part_sales", "customers",
     "invoices", "payments", "expenses", "employees", "salaries",
     "scrap_allocations", "shokubai_allocations", "small_sales", "audit_logs",
@@ -5288,6 +5289,55 @@ async def assistant_transcribe(request: Request, user: dict = Depends(get_curren
         return {"text": text_value[:12000]}
     except httpx.HTTPError:
         raise HTTPException(status_code=502, detail="Speech transcription connection failed.")
+
+
+# Independent reminder register; never posts to inventory or financial ledgers.
+class DealSheetIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+class DealRecordIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    chassis: str = Field(default="", max_length=100)
+    direction: str
+    cost: Optional[int] = Field(default=None, ge=0, le=1000000000000)
+    price: Optional[int] = Field(default=None, ge=0, le=1000000000000)
+    paid: int = Field(default=0, ge=0, le=1000000000000)
+    date: str = Field(default="", max_length=20)
+    notes: str = Field(default="", max_length=2000)
+
+@api.get("/deal-register")
+async def deal_sheets(user: dict = Depends(require("reports.view"))):
+    return await sdb.deal_sheets.find({}, {"_id": 0}).sort("created_at", 1).to_list(2000)
+
+@api.post("/deal-register")
+async def deal_sheet_create(body: DealSheetIn, user: dict = Depends(require("reports.view"))):
+    if not body.name.strip():
+        raise HTTPException(400, "Name required")
+    doc = {"id": new_id(), "name": body.name.strip(), "created_at": now_iso()}
+    await sdb.deal_sheets.insert_one(doc)
+    return doc
+
+@api.get("/deal-register/{sid}")
+async def deal_records(sid: str, user: dict = Depends(require("reports.view"))):
+    return await sdb.deal_records.find({"sheet_id": sid}, {"_id": 0}).sort("created_at", -1).to_list(10000)
+
+@api.put("/deal-register/{sid}/records/{rid}")
+async def deal_record_save(sid: str, rid: str, body: DealRecordIn, user: dict = Depends(require("reports.view"))):
+    if not await sdb.deal_sheets.find_one({"id": sid}):
+        raise HTTPException(404, "Sheet not found")
+    if body.direction not in ("given", "taken", "auction") or not body.name.strip():
+        raise HTTPException(400, "Invalid record")
+    doc = body.model_dump()
+    if body.direction == "taken":
+        doc["cost"] = None
+    await sdb.deal_records.update_one({"id": rid, "sheet_id": sid}, {"$set": doc, "$setOnInsert": {"created_at": now_iso()}}, upsert=True)
+    return {"ok": True}
+
+@api.delete("/deal-register/{sid}/records/{rid}")
+async def deal_record_delete(sid: str, rid: str, user: dict = Depends(require("reports.view"))):
+    await sdb.deal_records.delete_one({"id": rid, "sheet_id": sid})
+    return {"ok": True}
+
 
 app.include_router(api)
 
