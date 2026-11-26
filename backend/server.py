@@ -1493,12 +1493,18 @@ async def sell_complete(vid: str, body: CompleteSaleIn,
         raise HTTPException(status_code=400, detail="Dismantled vehicle cannot be sold as complete")
     if v["status"] != "in_stock":
         raise HTTPException(status_code=400, detail="Only in-stock vehicles can be sold as complete")
+    if not await sdb.customers.find_one({"id": body.customer_id}):
+        raise HTTPException(404, "Customer not found")
+    if not (body.sale_price > 0 and 0 <= body.amount_received <= body.sale_price):
+        raise HTTPException(400, "Invalid sale price or payment")
     sale_date = body.sale_date or now_iso()[:10]
     balance = round(body.sale_price - body.amount_received, 2)
-    await sdb.vehicles.update_one({"id": vid}, {"$set": {
+    result = await sdb.vehicles.update_one({"id": vid, "status": "in_stock"}, {"$set": {
         "status": "sold_complete", "sale_price": body.sale_price, "sale_date": sale_date,
         "customer_id": body.customer_id, "amount_received": body.amount_received,
         "balance_due": balance}})
+    if not result.matched_count:
+        raise HTTPException(409, "Vehicle already sold")
     await fund_upsert("vehicle_sale", vid, "in", body.amount_received, body.method,
                       sale_date, "vehicle_sale", f"Vehicle sale {v.get('chassis_number','')}")
     await audit(user, "sell", "vehicle",
@@ -1830,6 +1836,7 @@ async def get_customer(cid: str, user: dict = Depends(require("customers.view"))
                     it["chassis_number"] = tp.get("chassis_number", "") or ""
                     it["engine_number"] = tp.get("engine_number", "") or ""
     c["invoices"] = invs
+    c["vehicle_sales"] = await sdb.vehicles.find({"customer_id": cid, "status": "sold_complete", "invoice_id": {"$in": [None, ""]}}, {"_id": 0}).sort("sale_date", -1).to_list(2000)
     # Engine / half-cut sales are stored on tracked_parts (not invoices) — include them.
     tracked = await sdb.tracked_parts.find({"customer_id": cid, "invoice_id": {"$in": [None, ""]}}, {"_id": 0}).sort("sale_date", -1).to_list(500)
     c["tracked_sales"] = [t for t in tracked if t.get("sale_price")]
@@ -2575,6 +2582,16 @@ async def create_invoice(body: InvoiceIn, user: dict = Depends(require("finance.
     inv_no = await next_invoice_number()
     # Editable business date: use chosen sale_date; timestamp used by summaries/history.
     created_at = (body.sale_date + "T12:00:00") if body.sale_date else now_iso()
+    if not await sdb.customers.find_one({"id": body.customer_id}):
+        raise HTTPException(404, "Customer not found")
+    vehicle_refs = set()
+    for it in body.items:
+        if it.item_type == "vehicle":
+            if not it.ref_id or it.ref_id in vehicle_refs or it.quantity != 1 or it.unit_price <= 0:
+                raise HTTPException(400, "Invalid or duplicate vehicle line")
+            vehicle_refs.add(it.ref_id)
+            if not await sdb.vehicles.find_one({"id": it.ref_id, "status": "in_stock"}):
+                raise HTTPException(400, "Vehicle is not available for sale")
     # Engine / H-C items use tracked_parts inventory. Verify availability before
     # creating the invoice so a stale browser cannot sell an already-sold item.
     for it in body.items:
@@ -2755,7 +2772,7 @@ async def delete_invoice(iid: str, user: dict = Depends(require("finance.edit"))
         raise HTTPException(status_code=404, detail="Invoice not found")
     for it in inv["items"]:
         if it.get("item_type") == "vehicle" and it.get("ref_id"):
-            await sdb.vehicles.update_one({"id": it["ref_id"]}, {"$set": {
+            await sdb.vehicles.update_one({"id": it["ref_id"], "invoice_id": iid}, {"$set": {
                 "status": "in_stock", "sale_price": 0, "sale_date": None, "customer_id": None,
                 "amount_received": 0, "balance_due": 0, "invoice_id": None}})
         elif it.get("item_type") == "part" and it.get("ref_id"):
@@ -2950,6 +2967,12 @@ async def compute_pnl(start=None, end=None):
                 cogs += vmap.get(it["ref_id"], 0)
             elif it.get("item_type") == "part" and it.get("ref_id"):
                 cogs += pmap.get(it["ref_id"], 0) * it.get("quantity", 1)
+    direct_filter = {"status": "sold_complete", "invoice_id": {"$in": [None, ""]}}
+    if q:
+        direct_filter["sale_date"] = q["created_at"]
+    for v in await sdb.vehicles.find(direct_filter, {"_id": 0}).to_list(20000):
+        sales_revenue += v.get("sale_price", 0)
+        cogs += v.get("purchase_price", 0)
     eq = {"created_at": q["created_at"]} if q else {}
     expenses = sum(e["amount"] for e in await sdb.expenses.find(eq, {"_id": 0}).to_list(5000))
     salaries = sum(s["amount"] for s in await sdb.salaries.find({"date": q["created_at"]} if q else {}, {"_id": 0}).to_list(5000))
@@ -3195,7 +3218,8 @@ async def dashboard(user: dict = Depends(require("dashboard.view"))):
     recent = await sdb.audit_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(8)
     today = now_iso()[:10]
     today_invoices = await sdb.invoices.find({"created_at": {"$gte": today}}, {"_id": 0}).to_list(2000)
-    today_sales = sum(i["subtotal"] for i in today_invoices)
+    today_sales = sum(i.get("total", i.get("subtotal", 0)) for i in today_invoices)
+    today_sales += sum(v.get("sale_price", 0) for v in await sdb.vehicles.find({"status": "sold_complete", "invoice_id": {"$in": [None, ""]}, "sale_date": today}, {"_id": 0, "sale_price": 1}).to_list(2000))
     today_pays = await sdb.payments.find({"created_at": {"$gte": today}}, {"_id": 0}).to_list(2000)
     today_payments = sum(p["amount"] for p in today_pays)
     low_stock_count = await sdb.parts.count_documents({"quantity": {"$lte": 3}})
@@ -3697,7 +3721,7 @@ async def summarize(start, end):
     pv = await sdb.vehicles.find({"purchase_date": {"$gte": start, "$lte": hi}}, {"_id": 0, "purchase_price": 1}).to_list(20000)
     complete = await sdb.vehicles.find({"status": {"$in": ["sold", "sold_complete"]}, "sale_date": {"$gte": start, "$lte": hi}}, {"_id": 0}).to_list(20000)
     complete_sales = sum(v.get("sale_price", 0) for v in complete)
-    complete_recv = sum(v.get("amount_received", 0) for v in complete)
+    complete_recv = sum(v.get("amount_received", 0) for v in complete if not v.get("invoice_id"))
     # Invoice-linked Engine/H-C sales are already included in invoice totals below.
     # Only legacy/direct tracked sales should be added separately here.
     tracked = await sdb.tracked_parts.find({"status": "sold", "invoice_id": {"$in": [None, ""]},
