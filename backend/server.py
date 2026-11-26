@@ -1362,6 +1362,7 @@ async def create_vehicle(body: Vehicle, user: dict = Depends(require("vehicles.e
         doc["broker_vehicle_id"] = broker_vehicle_id
         doc["payment_method"] = None
     vid = new_id()
+    doc["purchase_date"] = doc.get("purchase_date") or now_iso()[:10]
     doc.update({"id": vid, "status": "in_stock", "sale_price": 0,
                 "sale_date": None, "customer_id": None, "created_at": now_iso()})
     await sdb.vehicles.insert_one(doc)
@@ -1679,6 +1680,7 @@ async def list_parts(q: Optional[str] = None, user: dict = Depends(require("part
 async def create_part(body: Part, user: dict = Depends(require("parts.edit"))):
     doc = body.model_dump()
     doc["purchase_company"] = validate_purchase_company(doc.get("purchase_company"))
+    doc["purchase_date"] = doc.get("purchase_date") or now_iso()[:10]
     doc.update({"id": new_id(), "created_at": now_iso(), "purchased_quantity": body.quantity})
     await sdb.parts.insert_one(doc)
     if not body.source_vehicle_id:
@@ -2673,6 +2675,10 @@ async def list_payments(user: dict = Depends(require("finance.view"))):
 async def create_payment(body: PaymentIn, user: dict = Depends(require("finance.edit"))):
     if body.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be greater than zero")
+    if not await sdb.customers.find_one({"id": body.customer_id}):
+        raise HTTPException(404, "Customer not found")
+    if not _valid_money_method(body.method):
+        raise HTTPException(400, "Select cash or bank")
     pay_date = body.date or now_iso()[:10]
     if body.invoice_id:
         inv = await sdb.invoices.find_one({"id": body.invoice_id}, {"_id": 0})
@@ -2945,43 +2951,11 @@ async def pay_salary(body: SalaryIn, user: dict = Depends(require("finance.edit"
 
 # ---------------- Reports & Dashboard ----------------
 async def compute_pnl(start=None, end=None):
-    q = {}
-    if start or end:
-        rng = {}
-        if start:
-            rng["$gte"] = start
-        if end:
-            rng["$lte"] = end + "T23:59:59"
-        q["created_at"] = rng
-    invoices = await sdb.invoices.find(q, {"_id": 0}).to_list(5000)
-    # Sales recorded at the tax-INCLUSIVE amount the customer pays; tax shown separately.
-    sales_revenue = sum(i.get("total", i.get("subtotal", 0)) for i in invoices)
-    tax_collected = sum(i["tax"] for i in invoices)
-    # COGS: cost of sold vehicles + cost of sold parts (via invoice items)
-    cogs = 0.0
-    vmap = {v["id"]: v.get("purchase_price", 0) for v in await sdb.vehicles.find({}, {"_id": 0, "id": 1, "purchase_price": 1}).to_list(20000)}
-    pmap = {p["id"]: p.get("unit_cost", 0) for p in await sdb.parts.find({}, {"_id": 0, "id": 1, "unit_cost": 1}).to_list(20000)}
-    for inv in invoices:
-        for it in inv["items"]:
-            if it.get("item_type") == "vehicle" and it.get("ref_id"):
-                cogs += vmap.get(it["ref_id"], 0)
-            elif it.get("item_type") == "part" and it.get("ref_id"):
-                cogs += pmap.get(it["ref_id"], 0) * it.get("quantity", 1)
-    direct_filter = {"status": "sold_complete", "invoice_id": {"$in": [None, ""]}}
-    if q:
-        direct_filter["sale_date"] = q["created_at"]
-    for v in await sdb.vehicles.find(direct_filter, {"_id": 0}).to_list(20000):
-        sales_revenue += v.get("sale_price", 0)
-        cogs += v.get("purchase_price", 0)
-    eq = {"created_at": q["created_at"]} if q else {}
-    expenses = sum(e["amount"] for e in await sdb.expenses.find(eq, {"_id": 0}).to_list(5000))
-    salaries = sum(s["amount"] for s in await sdb.salaries.find({"date": q["created_at"]} if q else {}, {"_id": 0}).to_list(5000))
-    gross_profit = sales_revenue - cogs
-    net_profit = gross_profit - expenses - salaries
-    return {"sales_revenue": round(sales_revenue, 2), "tax_collected": round(tax_collected, 2),
-            "cogs": round(cogs, 2), "gross_profit": round(gross_profit, 2),
-            "expenses": round(expenses, 2), "salaries": round(salaries, 2),
-            "net_profit": round(net_profit, 2)}
+    period = await summarize(start or await _operating_period_start(), end or now_iso()[:10])
+    return {"sales_revenue": period["total_sales"], "tax_collected": period.get("included_tax", 0),
+            "cogs": period["cogs"], "gross_profit": round(period["total_sales"] - period["cogs"], 2),
+            "expenses": round(period["total_expenses"] - period["salaries"], 2),
+            "salaries": period["salaries"], "net_profit": period["net_profit"]}
 
 
 def _prev_day(d):
@@ -2999,8 +2973,8 @@ async def recovered_asof(v, asof):
         rec += t.get("sale_price", 0)
     for p in await sdb.part_sales.find({"source_vehicle_id": vid, "date": {"$lte": hi}}, {"_id": 0, "sale_price": 1}).to_list(500):
         rec += p.get("sale_price", 0)
-    async for a in sdb.scrap_allocations.find({"vehicle_ids": vid, "date": {"$lte": hi}}, {"_id": 0, "per_vehicle": 1}):
-        rec += a.get("per_vehicle", 0)
+    async for a in sdb.scrap_allocations.find({"vehicle_ids": vid, "date": {"$lte": hi}}, {"_id": 0, "per_vehicle": 1, "vehicle_amounts": 1}):
+        rec += (a.get("vehicle_amounts") or {}).get(vid, a.get("per_vehicle", 0))
     async for a in sdb.shokubai_allocations.find({"vehicle_ids": vid, "sale_date": {"$lte": hi}}, {"_id": 0, "per_vehicle": 1}):
         rec += a.get("per_vehicle", 0)
     if v.get("status") in ("sold", "sold_complete") and (v.get("sale_date") or "") <= hi:
@@ -3782,7 +3756,7 @@ async def summarize(start, end):
     total_expenses = sum(by.values()) + salaries
     direct = await sdb.tracked_parts.find({"source": "direct", "date": {"$gte": start, "$lte": hi}}, {"_id": 0, "purchase_price": 1}).to_list(20000)
     standalone_purchases = round(sum(t.get("purchase_price", 0) for t in direct), 2)
-    period_parts = await sdb.parts.find({"$or": [
+    period_parts = await sdb.parts.find({"source_vehicle_id": {"$in": [None, ""]}, "$or": [
         {"purchase_date": {"$gte": start, "$lte": hi}},
         {"purchase_date": None, "created_at": {"$gte": start, "$lte": hi}}]}, {"_id": 0, "unit_cost": 1, "quantity": 1, "purchased_quantity": 1}).to_list(20000)
     # Purchases use the ORIGINAL purchased quantity so history never shrinks when stock is sold.
@@ -3793,7 +3767,7 @@ async def summarize(start, end):
     closing_stock = await stock_value_asof(end)
     cogs = round(opening_stock + total_purchases - closing_stock, 2)
     net_profit = round(total_sales - cogs - total_expenses, 2)
-    return {"vehicles_purchased": len(pv), "purchase_total": vehicle_purchases,
+    return {"included_tax": included_tax, "vehicles_purchased": len(pv), "purchase_total": vehicle_purchases,
             "vehicle_purchases": vehicle_purchases, "standalone_purchases": standalone_purchases,
             "parts_purchases": parts_purchases, "total_purchases": total_purchases,
             "complete_sales": round(complete_sales, 2), "engine_sales": round(engine_sales, 2),
