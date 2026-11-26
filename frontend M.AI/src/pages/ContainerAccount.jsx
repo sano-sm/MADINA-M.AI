@@ -19,7 +19,7 @@ const netOf = (r) => Math.round((asAmount(r.container_amount) - asAmount(r.recei
 
 const headings = [
   "Date", "Company", "Destination", "Container No.", "Invoice No.",
-  "Container Amount", "TT Amount", "TT Date", "Balance Due / Overpaid", "Surrender Date"
+  "Container Amount", "TT Amount", "TT Date", "Balance", "Surrender Date"
 ];
 const fieldNames = [
   "date", "company", "destination", "container_no", "invoice_no",
@@ -73,7 +73,7 @@ function DataRow({ record, editable, onSave, onDelete }) {
       {editing ? <EditCell field={field} record={draft} onChange={update} /> :
         field === "balance" ?
           <strong className={diff < 0 ? "ca-red" : "ca-blue"}>
-            {diff < 0 ? "Overpaid " : ""}{formatYen(Math.abs(diff))}
+            {formatYen(Math.abs(diff))}
           </strong> :
         field === "container_amount" || field === "received_amount" ? formatYen(record[field]) :
         record[field] || "—"}
@@ -250,7 +250,7 @@ export default function ContainerAccount() {
       </div>
 
       <div className="ca-table-scroll">
-        <table className="ca-table" dir="ltr">
+        <table className="ca-table ca-compact-table" dir="ltr">
           <thead><tr>{headings.map((h) => <th key={h}>{h}</th>)}<th>Action</th></tr></thead>
           <tbody>
             {loading ? <tr><td colSpan={11} className="ca-empty">Loading container account...</td></tr> : null}
