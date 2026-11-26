@@ -351,8 +351,8 @@ export default function Vehicles() {
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
               <VehiclePurchaseDateField t={t} value={form.purchase_date || ""} entryYear={entryYear} persistYear={!form.id}
                 onYearChange={setEntryYear} onChange={(purchase_date) => setForm({ ...form, purchase_date })} />
-              <Field label={t("vehicle_name")}><NameSuggestInput kind="vehicle" data-testid="v-name" value={form.vehicle_name} onChange={(e) => setForm({ ...form, vehicle_name: e.target.value })} /></Field>
-              <Field label={t("chassis")}><Input data-testid="v-chassis" value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
+              <Field label={t("vehicle_name")}><NameSuggestInput kind="vehicle" data-testid="v-name" value={form.vehicle_name} onChange={(e) => setForm({ ...form, vehicle_name: e.target.value.toUpperCase() })} /></Field>
+              <Field label={t("chassis")}><Input data-testid="v-chassis" value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value.toUpperCase() })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
               <Field label={t("from_label")}><NameSuggestInput kind="supplier" data-testid="v-from" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} /></Field>
               <Field label={t("purchase_price")}><Input type="number" data-testid="v-price" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} /></Field>
               <Field label={t("payment_method")}><Select value={form.payment_method || ""} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} disabled={!!form.broker_vehicle_id}><option value="">{t("not_recorded")}</option><option value="cash">{t("cash")}</option><option value="bank">{t("bank")}</option></Select></Field>
@@ -369,11 +369,11 @@ export default function Vehicles() {
             <details className="mt-1 rounded-sm border border-border p-3">
               <summary className="cursor-pointer text-sm text-[var(--gold)]" data-testid="v-more-details">{t("more_details")}</summary>
               <div className="mt-3 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-                <Field label={t("make")}><NameSuggestInput kind="make" data-testid="v-make" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} /></Field>
-                <Field label={t("model")}><NameSuggestInput kind="model" data-testid="v-model" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
-                <Field label={t("engine_name")}><NameSuggestInput kind="engine" data-testid="v-engine-name" value={form.engine_name} onChange={(e) => setForm({ ...form, engine_name: e.target.value })} /></Field>
-                <Field label={t("engine_code")}><Input data-testid="v-engine-code" value={form.engine_code} onChange={(e) => setForm({ ...form, engine_code: e.target.value })} /></Field>
-                <Field label={t("engine_number")}><Input data-testid="v-engine-number" value={form.engine_number} onChange={(e) => setForm({ ...form, engine_number: e.target.value })} /></Field>
+                <Field label={t("make")}><NameSuggestInput kind="make" data-testid="v-make" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value.toUpperCase() })} /></Field>
+                <Field label={t("model")}><NameSuggestInput kind="model" data-testid="v-model" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value.toUpperCase() })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
+                <Field label={t("engine_name")}><NameSuggestInput kind="engine" data-testid="v-engine-name" value={form.engine_name} onChange={(e) => setForm({ ...form, engine_name: e.target.value.toUpperCase() })} /></Field>
+                <Field label={t("engine_code")}><Input data-testid="v-engine-code" value={form.engine_code} onChange={(e) => setForm({ ...form, engine_code: e.target.value.toUpperCase() })} /></Field>
+                <Field label={t("engine_number")}><Input data-testid="v-engine-number" value={form.engine_number} onChange={(e) => setForm({ ...form, engine_number: e.target.value.toUpperCase() })} /></Field>
                 <Field label={t("year")}><Input type="number" data-testid="v-year" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} /></Field>
                 <Field label={t("color")}><Input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} /></Field>
                 <Field label={t("mileage")}><Input type="number" value={form.mileage} onChange={(e) => setForm({ ...form, mileage: e.target.value })} /></Field>
