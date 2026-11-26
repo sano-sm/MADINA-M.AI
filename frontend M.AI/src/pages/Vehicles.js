@@ -72,11 +72,14 @@ export default function Vehicles() {
 
   const [catalogChoices, setCatalogChoices] = useState([]);
   const [catalogHint, setCatalogHint] = useState("");
+  const catalogRequest = useRef(0);
   const lookupVehicle = async (raw, base) => {
+    const request = ++catalogRequest.current;
     const value = String(raw || "").trim();
     if (value.length < 3) return;
     try {
       const {data} = await api.get("/vehicle-catalog/search", {params:{q:value}});
+      if (request !== catalogRequest.current) return;
       const normalized = x => String(x || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const qcode = normalized(value);
       const eligible = data.filter(r => { const code = normalized(r.model_code); return code && (qcode === code || qcode.startsWith(code)); });
@@ -86,18 +89,18 @@ export default function Vehicles() {
       const unique = [...new Map(best.map(r=>[`${r.make}|${r.vehicle_name}|${r.model_code}|${r.engine_code}`,r])).values()];
       if (unique.length===1) {applyCatalogChoice(unique[0]);setCatalogChoices([]);setCatalogHint("Model reference matched. Check before saving.");}
       else {setCatalogChoices(unique);setCatalogHint("Multiple model/engine matches — select the correct one.");}
-    } catch {setCatalogHint("Catalog lookup unavailable; manual entry remains available.");}
+    } catch {if(request !== catalogRequest.current) return; setCatalogHint("Catalog lookup unavailable; manual entry remains available.");}
   };
   const applyCatalogChoice = r => {
-    setForm(prev => prev ? {...prev, make:prev.make || r.make, vehicle_name:prev.vehicle_name || r.vehicle_name,
-      model:prev.model || r.model_code, engine_code:prev.engine_code || r.engine_code} : prev);
+    setForm(prev => prev ? {...prev, make:(r.make || "").toUpperCase(), vehicle_name:(r.vehicle_name || "").toUpperCase(),
+      model:(r.model_code || "").toUpperCase(), engine_name:"", engine_code:/verify|unknown/i.test(r.engine_code || "")?"":(r.engine_code || "").toUpperCase()} : prev);
     setCatalogChoices([]);
   };
   const openAdd = () => {
     api.get("/broker-vehicles/pending").then((r) => setPendingBV(r.data)).catch(() => setPendingBV([]));
     const today = new Date();
     const md = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    setCatalogChoices([]); setCatalogHint("");
+    catalogRequest.current++; setCatalogChoices([]); setCatalogHint("");
     setForm({ ...empty, purchase_date: `${entryYear}-${md}`, payment_method: "bank", purchase_company: "MTC" });
   };
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function Vehicles() {
     // Voice navigation intentionally opens the normal, permission-checked form; it never bypasses save confirmation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editable]);
-  const openEdit = (v) => { setCatalogChoices([]); setCatalogHint(""); setForm({ ...empty, ...v, purchase_date: (v.purchase_date || "").slice(0, 10), payment_method: v.payment_method || "", purchase_company: v.purchase_company || "MTC" }); };
+  const openEdit = (v) => { catalogRequest.current++; setCatalogChoices([]); setCatalogHint(""); setForm({ ...empty, ...v, purchase_date: (v.purchase_date || "").slice(0, 10), payment_method: v.payment_method || "", purchase_company: v.purchase_company || "MTC" }); };
   const setEntryYear = (y) => {
     const n = Number(y);
     if (!Number.isFinite(n) || n < 2000 || n > 2100) return;
@@ -352,7 +355,7 @@ export default function Vehicles() {
               <VehiclePurchaseDateField t={t} value={form.purchase_date || ""} entryYear={entryYear} persistYear={!form.id}
                 onYearChange={setEntryYear} onChange={(purchase_date) => setForm({ ...form, purchase_date })} />
               <Field label={t("vehicle_name")}><NameSuggestInput kind="vehicle" data-testid="v-name" value={form.vehicle_name} onChange={(e) => setForm({ ...form, vehicle_name: e.target.value.toUpperCase() })} /></Field>
-              <Field label={t("chassis")}><Input data-testid="v-chassis" value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value.toUpperCase() })} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
+              <Field label={t("chassis")}><Input data-testid="v-chassis" value={form.chassis_number} onChange={(e) => { const value=e.target.value.toUpperCase(); const prefix=x=>String(x||"").split(/[-/]/)[0].trim().toUpperCase(); catalogRequest.current++; setCatalogChoices([]); setCatalogHint(""); setForm(prev=>({...prev,chassis_number:value,...(prefix(prev.chassis_number)!==prefix(value)?{make:"",vehicle_name:"",model:"",engine_name:"",engine_code:"",engine_number:""}:{})})); }} onBlur={(e) => lookupVehicle(e.target.value, form)} /></Field>
               <Field label={t("from_label")}><NameSuggestInput kind="supplier" data-testid="v-from" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} /></Field>
               <Field label={t("purchase_price")}><Input type="number" data-testid="v-price" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} /></Field>
               <Field label={t("payment_method")}><Select value={form.payment_method || ""} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} disabled={!!form.broker_vehicle_id}><option value="">{t("not_recorded")}</option><option value="cash">{t("cash")}</option><option value="bank">{t("bank")}</option></Select></Field>
