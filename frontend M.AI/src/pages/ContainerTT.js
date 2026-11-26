@@ -42,7 +42,13 @@ export default function ContainerTT() {
         <div className="ct-folder-panel-heading">
           <Ship aria-hidden="true" className="ct-folder-panel-ship" />
           <span>Container <span className="ct-folder-amp">&amp;</span> TT</span>
-          <span className="ct-folder-heading-line" />
+          <span className="ct-folder-heading-line" style={{display:"flex", alignItems:"center", justifyContent:"center", flex:"1 1 auto", minWidth:0, height:"auto", background:"none", overflow:"visible"}}>
+            <button type="button" data-testid="ct-folder-account" aria-pressed={folder === "account"}
+              onClick={() => setFolder("account")}
+              style={{background:"transparent", border:0, padding:"4px 2px", color:"#e5b94e", fontSize:"clamp(10px, 3.2vw, 18px)", fontWeight:700, whiteSpace:"nowrap", cursor:"pointer", lineHeight:1.2, textDecoration:folder === "account" ? "underline" : "none"}}>
+              Container Account
+            </button>
+          </span>
         </div>
         <div className="ct-folder-grid">
           {[
@@ -66,10 +72,6 @@ export default function ContainerTT() {
               </span>
             </button>
           ))}
-          <button type="button" className="ct-account-folder-entry" data-testid="ct-folder-account"
-            aria-pressed={folder === "account"} onClick={() => setFolder("account")}>
-            <span>Container Account</span>
-          </button>
         </div>
       </section>
       {folder && (
