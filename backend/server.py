@@ -2975,8 +2975,8 @@ async def recovered_asof(v, asof):
         rec += p.get("sale_price", 0)
     async for a in sdb.scrap_allocations.find({"vehicle_ids": vid, "date": {"$lte": hi}}, {"_id": 0, "per_vehicle": 1, "vehicle_amounts": 1}):
         rec += (a.get("vehicle_amounts") or {}).get(vid, a.get("per_vehicle", 0))
-    async for a in sdb.shokubai_allocations.find({"vehicle_ids": vid, "sale_date": {"$lte": hi}}, {"_id": 0, "per_vehicle": 1}):
-        rec += a.get("per_vehicle", 0)
+    async for a in sdb.shokubai_allocations.find({"vehicle_ids": vid, "sale_date": {"$lte": hi}}, {"_id": 0, "per_vehicle": 1, "vehicle_amounts": 1}):
+        rec += (a.get("vehicle_amounts") or {}).get(vid, a.get("per_vehicle", 0))
     if v.get("status") in ("sold", "sold_complete") and (v.get("sale_date") or "") <= hi:
         rec += v.get("sale_price", 0)
     return rec
@@ -3290,8 +3290,9 @@ async def compute_recovery(v):
         scrap_refs.append({"month": a["month"], "amount": amount, "id": a["id"]})
     shok, shok_refs = 0.0, []
     async for a in sdb.shokubai_allocations.find({"vehicle_ids": vid}, {"_id": 0}):
-        shok += a["per_vehicle"]
-        shok_refs.append({"period": f"{a['prev_cutoff']} → {a['new_cutoff']}", "amount": a["per_vehicle"], "id": a["id"]})
+        amount = (a.get("vehicle_amounts") or {}).get(vid, a["per_vehicle"])
+        shok += amount
+        shok_refs.append({"period": f"{a['prev_cutoff']} → {a['new_cutoff']}", "amount": amount, "id": a["id"]})
     part_sales = await sdb.part_sales.find({"source_vehicle_id": vid}, {"_id": 0}).to_list(500)
     ps_engine = [p for p in part_sales if p.get("category") == "engine"]
     ps_hcut = [p for p in part_sales if p.get("category") == "half_cut"]
@@ -3562,8 +3563,21 @@ async def list_scrap(user: dict = Depends(require("finance.view"))):
     return await sdb.scrap_allocations.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 
+def split_vehicle_amount(total, ids):
+    # Integer minor units avoid negative rounding remainders on large batches.
+    from decimal import Decimal, ROUND_HALF_UP
+    cents = int((Decimal(str(total)) * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    if cents < 0 or not ids:
+        raise HTTPException(400, "Invalid allocation")
+    ids = sorted(set(ids))
+    base, extra = divmod(cents, len(ids))
+    return {vid: (base + (i < extra)) / 100 for i, vid in enumerate(ids)}
+
+
 @api.post("/scrap-allocations")
 async def create_scrap(body: ScrapIn, user: dict = Depends(require("finance.edit"))):
+    if not (0 < body.total_amount < 1e15):
+        raise HTTPException(400, "Enter a positive scrap amount")
     if await sdb.scrap_allocations.find_one({"month": body.month}):
         raise HTTPException(status_code=400, detail="Scrap already allocated for this month")
     start, end = body.month + "-01", body.month + "-31"
@@ -3581,12 +3595,10 @@ async def create_scrap(body: ScrapIn, user: dict = Depends(require("finance.edit
     remaining = round(body.total_amount - fixed_total, 2)
     if not normal_ids and abs(remaining) > 0.01:
         raise HTTPException(status_code=400, detail="Total scrap must equal fixed scrap amounts when no normal vehicles remain")
+    if any(x < 0 for x in fixed.values()) or (not normal_ids and remaining != 0):
+        raise HTTPException(400, "Invalid fixed scrap amounts")
     per = round(remaining / len(normal_ids), 2) if normal_ids else 0
-    vehicle_amounts = {**fixed, **{vid: per for vid in normal_ids}}
-    # Put rounding remainder on the last normal vehicle so allocations equal the entered total exactly.
-    if normal_ids:
-        allocated = round(sum(vehicle_amounts.values()), 2)
-        vehicle_amounts[normal_ids[-1]] = round(vehicle_amounts[normal_ids[-1]] + body.total_amount - allocated, 2)
+    vehicle_amounts = {**fixed, **(split_vehicle_amount(remaining, normal_ids) if normal_ids else {})}
     doc = {"id": new_id(), "month": body.month, "date": body.date or (body.month + "-15"),
            "total_amount": body.total_amount, "vehicle_ids": ids, "per_vehicle": per,
            "vehicle_amounts": vehicle_amounts, "fixed_total": fixed_total,
@@ -3614,6 +3626,8 @@ async def list_shok(user: dict = Depends(require("finance.view"))):
 
 @api.post("/shokubai-allocations")
 async def create_shok(body: ShokubaiIn, user: dict = Depends(require("finance.edit"))):
+    if not (0 < body.total_amount < 1e15):
+        raise HTTPException(400, "Enter a positive Shokubai amount")
     prev = await sdb.shokubai_allocations.find_one(sort=[("new_cutoff", -1)])
     prev_cutoff = prev["new_cutoff"] if prev else "2000-01-01"
     if body.sale_date <= prev_cutoff:
@@ -3627,9 +3641,10 @@ async def create_shok(body: ShokubaiIn, user: dict = Depends(require("finance.ed
     if not ids:
         raise HTTPException(status_code=400, detail="No eligible dismantled vehicles for this period")
     per = round(body.total_amount / len(ids), 2)
+    vehicle_amounts = split_vehicle_amount(body.total_amount, ids)
     doc = {"id": new_id(), "prev_cutoff": prev_cutoff, "new_cutoff": body.sale_date,
            "sale_date": body.sale_date, "total_amount": body.total_amount, "vehicle_ids": ids,
-           "per_vehicle": per, "vehicle_count": len(ids), "created_at": now_iso()}
+           "per_vehicle": per, "vehicle_amounts": vehicle_amounts, "vehicle_count": len(ids), "created_at": now_iso()}
     await sdb.shokubai_allocations.insert_one(doc)
     doc.pop("_id", None)
     await audit(user, "create", "shokubai_allocation",
