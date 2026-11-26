@@ -51,6 +51,7 @@ export default function Customers() {
   // across individual sales. This does not post, move, or duplicate accounting entries.
   const salesForAllocation = detail ? [
     ...(detail.invoices || []).map((x) => ({ key: deliveryKey("invoice", x.id), date: x.sale_date || x.created_at || "", total: +x.total || 0, directPaid: +x.amount_paid || 0 })),
+    ...(detail.vehicle_sales || []).map(x=>({key:deliveryKey("vehicle_sale",x.id),date:x.sale_date||"",total:+x.sale_price||0,directPaid:+x.amount_received||0})),
     ...(detail.tracked_sales || []).map((x) => ({ key: deliveryKey("tracked_sale", x.id), date: x.sale_date || "", total: +x.sale_price || 0, directPaid: +x.amount_received || 0 })),
     ...(detail.part_sales || []).map((x) => ({ key: deliveryKey("part_sale", x.id), date: x.date || "", total: +x.sale_price || 0, directPaid: +x.amount_received || 0 })),
   ].sort((a, b) => String(a.date).localeCompare(String(b.date))) : [];
@@ -290,7 +291,7 @@ export default function Customers() {
                 {salesSearch && <button type="button" onClick={() => setSalesSearch("")} className="text-xs text-muted-foreground hover:text-white">×</button>}
               </div>
             </div>
-            {(detail.invoices.length || detail.tracked_sales?.length || detail.part_sales?.length || detail.shipping_costs?.length) ? (
+            {(detail.invoices.length || detail.vehicle_sales?.length || detail.tracked_sales?.length || detail.part_sales?.length || detail.shipping_costs?.length) ? (
               <div className="space-y-2">
                 {detail.invoices.filter(invoiceMatches).map((i) => (
                   <div key={i.id} data-testid={`cust-invoice-${i.id}`} className="rounded-sm border border-border p-2 text-sm">
@@ -320,6 +321,7 @@ export default function Customers() {
                     {canReceive && i.balance > 0 && <div className="mt-2 flex justify-end"><Btn variant="dark" data-testid={`receive-invoice-${i.id}`} onClick={() => openPayment(i)}>{t("receive_payment")}</Btn></div>}
                   </div>
                 ))}
+                {(detail.vehicle_sales || []).filter(v=>matchesSalesSearch(v.vehicle_name,v.chassis_number,v.engine_number,v.sale_date)).map(v=><div key={v.id} className="rounded-sm border border-border p-2 text-sm"><div className="flex justify-between gap-2"><b>{v.vehicle_name || v.chassis_number}</b><span>{money(v.sale_price)}</span></div><div className="text-xs text-muted-foreground">{v.sale_date} · {v.chassis_number}</div><div className="flex justify-between"><span>{t("paid")}: {money(displayPaid("vehicle_sale",v.id,v.amount_received||0))}</span><Badge tone={displayBalance("vehicle_sale",v.id,v.sale_price,v.balance_due||0)>0?"red":"green"}>{money(displayBalance("vehicle_sale",v.id,v.sale_price,v.balance_due||0))}</Badge></div></div>)}
                 {(detail.tracked_sales || []).filter(trackedMatches).map((ts) => (
                   <div key={ts.id} data-testid={`cust-tracked-${ts.id}`} className="rounded-sm border border-border p-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
@@ -356,6 +358,7 @@ export default function Customers() {
                 ))}
                 {salesNeedle &&
                   !detail.invoices.some(invoiceMatches) &&
+                  !(detail.vehicle_sales || []).some(v=>matchesSalesSearch(v.vehicle_name,v.chassis_number,v.engine_number,v.sale_date)) &&
                   !(detail.tracked_sales || []).some(trackedMatches) &&
                   !(detail.part_sales || []).some(partSaleMatches) &&
                   !(detail.shipping_costs || []).some(shippingMatches) && (
