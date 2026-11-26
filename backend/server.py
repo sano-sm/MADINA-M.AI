@@ -5396,6 +5396,10 @@ async def deal_record_delete(sid: str, rid: str, user: dict = Depends(require("r
     return {"ok": True}
 
 
+# Independent cross-company Container Account (no links to existing ledgers).
+from container_account import mount_container_account_routes
+mount_container_account_routes(api, db, require)
+
 app.include_router(api)
 
 
