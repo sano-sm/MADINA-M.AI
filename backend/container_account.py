@@ -27,6 +27,7 @@ def mount_container_account_routes(api, database, require):
         invoice_no: str = ""
         container_amount: float = 0
         received_amount: float = 0
+        tt_date: str = ""
         surrender_date: str = ""
 
         @field_validator("company")
@@ -60,7 +61,7 @@ def mount_container_account_routes(api, database, require):
                 raise ValueError("Amount must be finite and non-negative")
             return round(value, 2)
 
-        @field_validator("date", "invoice_no", "surrender_date")
+        @field_validator("date", "invoice_no", "surrender_date", "tt_date")
         @classmethod
         def valid_text(cls, value):
             return str(value or "").strip()[:100]
