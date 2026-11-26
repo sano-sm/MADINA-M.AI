@@ -67,7 +67,7 @@ def mount_container_account_routes(api, database, require):
 
     async def ensure_first_sheet():
         await sheets.update_one(
-            {"id": "container-account-sheet-01"},
+            {"_id": "container-account-sheet-01"},
             {"$setOnInsert": {"id": "container-account-sheet-01", "number": 1,
                               "name": "Sheet 01", "created_at": utc_now()}},
             upsert=True,
