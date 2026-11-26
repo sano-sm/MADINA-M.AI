@@ -138,13 +138,13 @@ export default function Parts() {
         <CompanySelector />
         <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
           <Field label={t("date")}><Input type="date" value={form.purchase_date || ""} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} /></Field>
-          <Field label={t("part_name")}><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+          <Field label={t("part_name")}><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })} /></Field>
           <Field label={t("quantity")}><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field>
           <Field label={t("unit_cost")}><Input type="number" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} /></Field>
           <Field label={t("sale_price")}><Input type="number" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} /></Field>
           <Field label={t("from_label")}><Input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} /></Field>
           <PaymentMethod t={t} value={form.payment_method || ""} onChange={(payment_method) => setForm({ ...form, payment_method })} />
-          <Field label={t("part_number")}><Input value={form.part_number || ""} onChange={(e) => setForm({ ...form, part_number: e.target.value })} /></Field>
+          <Field label={t("part_number")}><Input value={form.part_number || ""} onChange={(e) => setForm({ ...form, part_number: e.target.value.toUpperCase() })} /></Field>
           <Field label={t("category")}><Input value={form.category || ""} onChange={(e) => setForm({ ...form, category: e.target.value })} /></Field>
           <Field label={t("location")}><Input value={form.location || ""} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
         </div>
@@ -153,7 +153,7 @@ export default function Parts() {
       {form && tab !== "parts" && <div>
         <CompanySelector />
         <Field label={t("date")}><Input type="date" value={form.date || ""} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
-        <Field label={tab === "engine" ? t("engine_name_code") : t("hcut_desc")}><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+        <Field label={tab === "engine" ? t("engine_name_code") : t("hcut_desc")}><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })} /></Field>
         <Field label={t("from_label")}><Input value={form.supplier || ""} onChange={(e) => setForm({ ...form, supplier: e.target.value })} /></Field>
         <Field label={t("purchase_price")}><Input type="number" value={form.purchase_price || ""} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} /></Field>
         <PaymentMethod t={t} value={form.payment_method || ""} onChange={(payment_method) => setForm({ ...form, payment_method })} />
