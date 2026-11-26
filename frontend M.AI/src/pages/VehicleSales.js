@@ -22,12 +22,13 @@ export default function VehicleSales() {
 
   const load = useCallback(async () => {
     try {
-      const [ir, cr, vr] = await Promise.all([
+      const [ir, cr, vr, sr] = await Promise.all([
         api.get("/invoices"),
         api.get("/customers"),
         api.get("/vehicles?status=in_stock"),
+        api.get("/vehicles?status=sold_complete"),
       ]);
-      setRows((ir.data || []).filter((i) => (i.items || []).some((x) => x.item_type === "vehicle")));
+      setRows([...((ir.data || []).filter((i) => (i.items || []).some((x) => x.item_type === "vehicle"))), ...(sr.data || []).filter(v=>!v.invoice_id).map(v=>({id:"direct-"+v.id,direct:true,invoice_number:"Direct",sale_date:v.sale_date,customer_name:(cr.data||[]).find(c=>c.id===v.customer_id)?.name,items:[{item_type:"vehicle",description:v.vehicle_name||v.chassis_number}],total:v.sale_price,amount_paid:v.amount_received}))].sort((a,b)=>String(b.sale_date||b.created_at||"").localeCompare(String(a.sale_date||a.created_at||""))));
       setCustomers(cr.data || []);
       setVehicles(vr.data || []);
     } catch (_) {}
@@ -106,8 +107,8 @@ export default function VehicleSales() {
     }},
     { label: t("action"), action: true, render: (r) => (
       <div className="flex gap-1">
-        <a href={downloadUrl(`/invoices/${r.id}/pdf`)} target="_blank" rel="noreferrer"><Btn variant="ghost"><Download size={16} /></Btn></a>
-        {editable && <Btn variant="ghost" onClick={async () => {
+        {!r.direct && <a href={downloadUrl(`/invoices/${r.id}/pdf`)} target="_blank" rel="noreferrer"><Btn variant="ghost"><Download size={16} /></Btn></a>}
+        {editable && !r.direct && <Btn variant="ghost" onClick={async () => {
           if (!window.confirm(t("confirm_void"))) return;
           try { await api.delete(`/invoices/${r.id}`); toast.success(t("void")); load(); }
           catch (e) { toast.error(apiError(e)); }
