@@ -197,7 +197,7 @@ export default function ContainerAccount() {
 
   return <section className="ca-account" data-testid="container-account">
     <div className="ca-brand">
-      <strong>Madina MAI</strong>
+      <strong>MADINA TRADING CO</strong>
       <span>CONTAINER ACCOUNT</span>
     </div>
     <div className="ca-body">
