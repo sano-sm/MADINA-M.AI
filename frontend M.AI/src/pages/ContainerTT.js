@@ -1,4 +1,5 @@
 import FolderArtwork from "@/components/FolderArtwork";
+import ContainerAccount from "@/pages/ContainerAccount";
 import { printWindow } from "@/lib/documentPreview";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { api, apiError } from "@/lib/api";
@@ -65,6 +66,10 @@ export default function ContainerTT() {
               </span>
             </button>
           ))}
+          <button type="button" className="ct-account-folder-entry" data-testid="ct-folder-account"
+            aria-pressed={folder === "account"} onClick={() => setFolder("account")}>
+            <span>Container Account</span>
+          </button>
         </div>
       </section>
       {folder && (
@@ -72,17 +77,18 @@ export default function ContainerTT() {
           <button type="button" onClick={() => setFolder(null)} className="rounded-md border border-[var(--gold)] px-4 py-2 font-semibold text-[var(--gold)] hover:bg-white/10">
             ← Close Folder
           </button>
-          <span className="font-semibold gold-text">{folder === "invoices" ? "Container Invoice Folder" : folder === "income" ? "TT PDF Folder" : "BL PDF Folder"}</span>
+          <span className="font-semibold gold-text">{folder === "account" ? "Container Account" : folder === "invoices" ? "Container Invoice Folder" : folder === "income" ? "TT PDF Folder" : "BL PDF Folder"}</span>
         </div>
       )}
       {folder === "income" && <DocumentArchiveFolder kind="tt" />}
       {folder === "bl" && <DocumentArchiveFolder kind="bl" />}
       {folder === "invoices" && <InvoicesSection mode="folder" />}
+      {folder === "account" && <ContainerAccount />}
       {tab === "invoices" && !folder && <InvoicesSection mode="editor" />}
       {tab === "income" && !folder && <IncomeSection />}
       {tab === "bl" && !folder && <BLAmountSection />}
-      {tab === "monthly" && <MonthlySummarySection />}
-      {tab === "summary" && <SummarySection />}
+      {tab === "monthly" && !folder && <MonthlySummarySection />}
+      {tab === "summary" && !folder && <SummarySection />}
     </div>
   );
 }
