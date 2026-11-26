@@ -25,7 +25,7 @@ from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ReturnDocument
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
@@ -337,6 +337,11 @@ class BrokerIn(BaseModel):
 
 
 class BrokerVehicleIn(BaseModel):
+    @field_validator("vehicle_name", "chassis_number", mode="before")
+    @classmethod
+    def uppercase_identifiers(cls, value):
+        return value.upper() if isinstance(value, str) else value
+
     purchase_date: Optional[str] = None
     vehicle_name: str
     purchase_price: float = 0
@@ -373,6 +378,11 @@ class LoanEntryIn(BaseModel):
 
 
 class Vehicle(BaseModel):
+    @field_validator("chassis_number", "vehicle_name", "make", "model", "engine_name", "engine_code", "engine_number", mode="before")
+    @classmethod
+    def uppercase_identifiers(cls, value):
+        return value.upper() if isinstance(value, str) else value
+
     chassis_number: str = Field(min_length=1)
     vehicle_name: Optional[str] = ""
     make: Optional[str] = ""
@@ -395,6 +405,11 @@ class Vehicle(BaseModel):
 
 
 class Part(BaseModel):
+    @field_validator("name", "part_number", "source_chassis", mode="before")
+    @classmethod
+    def uppercase_identifiers(cls, value):
+        return value.upper() if isinstance(value, str) else value
+
     name: str
     part_number: Optional[str] = ""
     category: Optional[str] = ""
@@ -560,6 +575,11 @@ class SmallSaleIn(BaseModel):
 
 
 class TrackedPurchaseIn(BaseModel):
+    @field_validator("name", mode="before")
+    @classmethod
+    def uppercase_identifiers(cls, value):
+        return value.upper() if isinstance(value, str) else value
+
     date: Optional[str] = None
     part_type: str  # engine | half_cut
     name: str
@@ -5296,6 +5316,11 @@ class DealSheetIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
 
 class DealRecordIn(BaseModel):
+    @field_validator("name", "chassis", mode="before")
+    @classmethod
+    def uppercase_identifiers(cls, value):
+        return value.upper() if isinstance(value, str) else value
+
     name: str = Field(min_length=1, max_length=200)
     chassis: str = Field(default="", max_length=100)
     direction: str
