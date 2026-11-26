@@ -27,6 +27,8 @@ export default function ContainerTT() {
   // Folder appearance follows the website theme; existing records and calculations stay unchanged.
   const folderDesign = theme === "black" ? "b" : (theme === "royal" || theme === "emerald") ? "c" : "a";
 
+  if (folder === "account") return <div className="ca-fullscreen"><button type="button" className="ca-back" onClick={() => setFolder(null)}>← Back</button><ContainerAccount /></div>;
+
   return (
     <div>
       <PageHeader title={t("container_tt")} />
