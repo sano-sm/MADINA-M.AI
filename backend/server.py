@@ -348,6 +348,10 @@ class BrokerVehicleIn(BaseModel):
     paid_amount: float = 0
     payment_method: Optional[str] = None  # cash | bank for any amount paid at entry
     chassis_number: Optional[str] = ""
+    model: Optional[str] = ""
+    mileage: Optional[int] = None
+    color: Optional[str] = ""
+    engine_number: Optional[str] = ""
     notes: Optional[str] = ""
 
 
