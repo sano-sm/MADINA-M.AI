@@ -49,7 +49,7 @@ export default function CameraReview({onClose}) {
  const [ready,setReady] = useState(false);
  const [error,setError] = useState("");
  const [vehicle,setVehicle] = useState(blankVehicle);
- const [parts,setParts] = useState({company:"",date:today(),items:[]});
+ const [parts,setParts] = useState({company:"",date:today(),items:[],payment_method:"",purchase_company:"MTC"});
  const [target,setTarget] = useState("broker");
  const [brokers,setBrokers] = useState([]);
  const [brokerId,setBrokerId] = useState("");
@@ -76,7 +76,7 @@ export default function CameraReview({onClose}) {
    if(id!==runRef.current)return;
    const recognized=String(data?.text||"");
    if(kind==="vehicle"){setVehicle(parseVehicle(recognized));}
-   else {setParts(parseParts(recognized));}
+   else {setParts({...parseParts(recognized),payment_method:"",purchase_company:"MTC"});}
    setReady(true);
    if(!recognized.trim())setError("No readable text found. Fill in details manually or scan again.");
   } catch(err){if(id===runRef.current)setError("Scanner unavailable. Check your internet connection and try again.");}
@@ -92,7 +92,7 @@ export default function CameraReview({onClose}) {
   if(!vehicle.chassis_number.trim()){setError("Enter chassis number before saving.");return;}
   if(!vehicle.vehicle_name.trim()){setError("Enter vehicle name before saving.");return;}
   if(target==="broker"&&!brokerId){setError("Select a registered broker.");return;}
-  if(target==="broker"&&!can("finance.edit")){setError("Broker editing permission required.");return;}
+  if(target==="broker"&&number(vehicle.paid_amount)>0&&!vehicle.payment_method){setError("Choose Cash or Bank for the broker payment.");return;}\n  if(target==="broker"&&!can("finance.edit")){setError("Broker editing permission required.");return;}
   if(target==="direct"&&!can("vehicles.edit")){setError("Vehicle editing permission required.");return;}
   if(target==="direct"&&(!vehicle.supplier.trim()||!vehicle.payment_method)){setError("Enter seller and Cash/Bank payment method.");return;}
   setError("");setSaving(true);
@@ -101,7 +101,7 @@ export default function CameraReview({onClose}) {
     purchase_date:vehicle.purchase_date,vehicle_name:vehicle.vehicle_name,model:vehicle.model,chassis_number:vehicle.chassis_number,
     mileage:vehicle.mileage?number(vehicle.mileage):null,color:vehicle.color,engine_number:vehicle.engine_number,
     purchase_price:number(vehicle.purchase_price),paid_amount:number(vehicle.paid_amount),
-    payment_method:number(vehicle.paid_amount)>0?vehicle.payment_method||"cash":null
+    payment_method:number(vehicle.paid_amount)>0?vehicle.payment_method:null
    });
    else await api.post("/vehicles",{
     ...vehicle,mileage:vehicle.mileage?number(vehicle.mileage):null,purchase_price:number(vehicle.purchase_price),
@@ -113,16 +113,16 @@ export default function CameraReview({onClose}) {
  const saveParts = async () => {
   const valid=parts.items.filter(x=>x.name.trim()&&number(x.quantity)>0);
   if(!can("parts.edit")){setError("Parts editing permission required.");return;}
-  if(!valid.length){setError("Add at least one part/engine with quantity.");return;}
+  if(!valid.length){setError("Add at least one part/engine with quantity.");return;}\n  if(!parts.payment_method){setError("Choose Cash or Bank before saving purchases.");return;}
   setSaving(true);setError("");
   try{
    for(const x of valid){
     if(x.part_type==="engine"){
      await api.post("/tracked-parts",{date:parts.date,part_type:"engine",name:x.name,supplier:parts.company,
-      purchase_price:number(x.unit_cost)*number(x.quantity),payment_method:"bank",purchase_company:"MTC"});
+      purchase_price:number(x.unit_cost)*number(x.quantity),payment_method:parts.payment_method,purchase_company:parts.purchase_company});
     }else{
      await api.post("/parts",{name:x.name,quantity:number(x.quantity),unit_cost:number(x.unit_cost),
-      supplier:parts.company,purchase_date:parts.date,purchase_company:"MTC",payment_method:"bank"});
+      supplier:parts.company,purchase_date:parts.date,purchase_company:parts.purchase_company,payment_method:parts.payment_method});
     }
    }
    toast.success("Scanned items saved");onClose();
@@ -160,7 +160,7 @@ export default function CameraReview({onClose}) {
     </div>}
     {ready&&kind==="parts"&&<div className="mt-4 space-y-3">
      <Input label="Company / Supplier" value={parts.company} onChange={v=>setParts(p=>({...p,company:v}))}/>
-     <Input label="Date" type="date" value={parts.date} onChange={v=>setParts(p=>({...p,date:v}))}/>
+     <Input label="Date" type="date" value={parts.date} onChange={v=>setParts(p=>({...p,date:v}))}/>\n     <label className="block text-xs">Company<select value={parts.purchase_company} onChange={e=>setParts(p=>({...p,purchase_company:e.target.value}))} className="mt-1 w-full rounded border border-white/20 bg-[#19191c] p-2"><option value="MTC">MTC</option><option value="TSK">TSK</option></select></label>\n     <label className="block text-xs">Payment Method<select value={parts.payment_method} onChange={e=>setParts(p=>({...p,payment_method:e.target.value}))} className="mt-1 w-full rounded border border-white/20 bg-[#19191c] p-2"><option value="">Select Cash or Bank</option><option value="cash">Cash</option><option value="bank">Bank</option></select></label>
      {parts.items.map((item,i)=><div key={i} className="rounded border border-white/20 p-2">
       <div className="grid grid-cols-2 gap-2">
        <div className="col-span-2"><Input label="Item Name" value={item.name} onChange={v=>updateItem(i,"name",v)}/></div>
