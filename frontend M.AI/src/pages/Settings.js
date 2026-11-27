@@ -295,11 +295,10 @@ function AiControls() {
     ["master", "Master AI", "Hide or show all AI controls"],
     ["agent", "AI — External Agent", "Small AI microphone beside MTC logo; external provider not yet connected"],
     ["voice", "MAI — Madina Assistant", "Small MAI microphone beside MTC logo; local search/navigation"],
-    ["camera", "AI Camera", "Small camera beside Owner icon"],
   ];
   return <div className="card-surface max-w-xl rounded-xl p-5">
     <h2 className="mb-2 text-lg font-semibold text-white">AI Controls</h2>
-    <p className="mb-4 text-xs text-muted-foreground">MAI supports browser speech recognition for record search and section navigation in Urdu and English. External AI automation, write actions, and automatic camera OCR remain disabled until separately integrated.</p>
+    <p className="mb-4 text-xs text-muted-foreground">MAI supports browser speech recognition for record search and section navigation in Urdu and English. External AI automation, write actions remain disabled until separately integrated.</p>
     {controls.map(([key, title, desc]) => <label key={key} className="flex items-center justify-between gap-3 border-b border-white/10 py-3">
       <span><span className="block text-sm text-white">{title}</span><span className="text-xs text-muted-foreground">{desc}</span></span>
       <input type="checkbox" data-testid={`ai-toggle-${key}`} checked={prefs[key]} onChange={e => change(key,e.target.checked)} className="h-5 w-5 accent-yellow-500" />
