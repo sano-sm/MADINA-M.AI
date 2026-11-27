@@ -47,6 +47,7 @@ export default function CameraReview({onClose}) {
  const [kind,setKind] = useState("");
  const [busy,setBusy] = useState(false);
  const [ready,setReady] = useState(false);
+ const [verified,setVerified] = useState(false);
  const [error,setError] = useState("");
  const [vehicle,setVehicle] = useState(blankVehicle);
  const [parts,setParts] = useState({company:"",date:today(),items:[],payment_method:"",purchase_company:"MTC"});
@@ -66,7 +67,7 @@ export default function CameraReview({onClose}) {
   if(!file)return;
   if(!file.type.startsWith("image/")){setError("Choose an image.");return;}
   if(file.size>15*1024*1024){setError("Image is too large (15MB maximum).");return;}
-  const id=++runRef.current;setError("");setReady(false);setBusy(true);
+  const id=++runRef.current;setError("");setReady(false);setVerified(false);setBusy(true);
   try {
    const {createWorker}=await import("tesseract.js");
    const worker=await createWorker("jpn+eng",1);
@@ -83,12 +84,13 @@ export default function CameraReview({onClose}) {
   finally {if(id===runRef.current)setBusy(false);}
  };
  const choose = async value => {
-  setKind(value);setReady(false);setError("");
+  setKind(value);setReady(false);setVerified(false);setError("");
   if(value==="vehicle"&&can("finance.view")){
    try{const {data}=await api.get("/brokers");setBrokers(data||[]);}catch{setError("Broker list could not be loaded.");}
   }
  };
  const saveVehicle = async () => {
+  if(!verified){setError("Check the scanned details and tick confirmation first.");return;}
   if(!vehicle.chassis_number.trim()){setError("Enter chassis number before saving.");return;}
   if(!vehicle.vehicle_name.trim()){setError("Enter vehicle name before saving.");return;}
   if(target==="broker"&&!brokerId){setError("Select a registered broker.");return;}
@@ -113,6 +115,7 @@ export default function CameraReview({onClose}) {
  };
  const saveParts = async () => {
   const valid=parts.items.filter(x=>x.name.trim()&&number(x.quantity)>0);
+  if(!verified){setError("Check the scanned items and tick confirmation first.");return;}
   if(!can("parts.edit")){setError("Parts editing permission required.");return;}
   if(!valid.length){setError("Add at least one part/engine with quantity.");return;}
   if(!parts.payment_method){setError("Choose Cash or Bank before saving purchases.");return;}
@@ -173,7 +176,8 @@ export default function CameraReview({onClose}) {
      </div>)}
      <button className="rounded border border-white/20 p-2 text-xs" onClick={()=>setParts(p=>({...p,items:[...p.items,{name:"",quantity:"1",unit_cost:"",part_type:"parts"}]}))}>+ Add Item</button>
     </div>}
-    {ready&&<button disabled={saving} onClick={kind==="vehicle"?saveVehicle:saveParts} className="mt-4 w-full rounded bg-emerald-700 p-3 font-semibold disabled:opacity-40">{saving?"Saving…":"Confirm & Save Record"}</button>}
+    {ready&&<label className="mt-4 flex items-center gap-2 text-xs"><input type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)}/> I checked all extracted details (OK)</label>}
+    {ready&&<button disabled={saving||!verified} onClick={kind==="vehicle"?saveVehicle:saveParts} className="mt-4 w-full rounded bg-emerald-700 p-3 font-semibold disabled:opacity-40">{saving?"Saving…":"Confirm & Save Record"}</button>}
    </>}
    {error&&<p role="alert" className="mt-3 rounded border border-red-500/30 p-2 text-sm text-red-300">{error}</p>}
   </div>
