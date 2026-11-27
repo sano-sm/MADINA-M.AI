@@ -121,6 +121,15 @@ export default function ContainerAccount() {
     container_total: 0, received_total: 0,
     balance_label: "Balance Due", balance_amount: 0, is_overpaid: false
   };
+  const destinationAmounts = useMemo(() => {
+    const totals = { UAE: 0, PAK: 0 };
+    for (const row of data.rows) {
+      const destination = String(row.destination || "").trim().toUpperCase();
+      if (destination === "UAE") totals.UAE += asAmount(row.container_amount);
+      else if (destination === "PAK" || destination === "PAKISTAN") totals.PAK += asAmount(row.container_amount);
+    }
+    return totals;
+  }, [data.rows]);
   const entries = useMemo(() => data.rows.filter((item) => item.sheet_id === activeSheet),
     [data.rows, activeSheet]);
   const active = data.sheets.find((sheet) => sheet.id === activeSheet);
@@ -213,9 +222,15 @@ export default function ContainerAccount() {
               <div key={key}><span>{key}</span><strong>{summary.containers[key] || 0}</strong></div>)}
           </div>
         </div>
-        <div className="ca-metric ca-amount">
+        <div className="ca-metric ca-amount" style={{ position: "relative" }}>
           <div className="ca-metric-label">CONTAINER TOTAL</div>
-          <strong>{formatYen(summary.container_total)}</strong>
+          <strong aria-hidden="true" style={{ visibility: "hidden" }}>{formatYen(summary.container_total)}</strong>
+          <div style={{ position: "absolute", inset: "27px 9px 7px", display: "flex", flexDirection: "column", justifyContent: "space-evenly", gap: 1, color: "#243d37", fontVariantNumeric: "tabular-nums" }}>
+            {["UAE", "PAK"].map((key) => <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 3, minWidth: 0, lineHeight: 1.1 }}>
+              <span style={{ fontSize: 10, fontWeight: 700 }}>{key}</span>
+              <strong style={{ fontSize: "clamp(10px, 3.3vw, 16px)", fontWeight: 700, minWidth: 0, overflowWrap: "anywhere", textAlign: "right" }}>{formatYen(destinationAmounts[key])}</strong>
+            </div>)}
+          </div>
         </div>
         <div className="ca-metric ca-amount">
           <div className="ca-metric-label">RECEIVED AMOUNT TT</div>
