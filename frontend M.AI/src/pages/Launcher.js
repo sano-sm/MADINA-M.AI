@@ -1,5 +1,4 @@
 import VehicleCatalogSearch from "@/components/VehicleCatalogSearch";
-import CameraReview from "@/components/CameraReview";
 import { useAiPreferences } from "@/components/AiPreferences";
 import { SearchRecords } from "@/components/TradingDocuments";
 import React, { useEffect, useState, useMemo } from "react";
@@ -15,7 +14,7 @@ import {
   UserCog, Settings as SettingsIcon, Package, Bell, Cog, Recycle,
   CalendarRange, User, Home, Clock, Plus, Search, Power, Contact,
   Landmark, Container, Menu, Languages, PiggyBank, TrendingUp,
-  PieChart, ClipboardList, AlertTriangle, ChevronDown, Mic, Camera, Bot, Eye, EyeOff,
+  PieChart, ClipboardList, AlertTriangle, ChevronDown, Mic, Bot, Eye, EyeOff,
 } from "lucide-react";
 
 const GOLD = "#D4AF37";
@@ -183,13 +182,11 @@ export default function Launcher() {
 
   const [searchOpen,setSearchOpen] = useState(false);
   const [voiceKind,setVoiceKind] = useState(null);
-  const [cameraOpen,setCameraOpen] = useState(false);
   const [catalogOpen,setCatalogOpen] = useState(false);
   const maxSale = Math.max(1, ...series.map((s) => s.value));
 
   return (
     <div className="mx-auto w-full max-w-5xl overflow-x-hidden px-3 pb-28">
-      {cameraOpen && <CameraReview onClose={()=>setCameraOpen(false)} />}
       {catalogOpen && <VehicleCatalogSearch onClose={()=>setCatalogOpen(false)} />}
       {searchOpen && <SearchRecords close={() => setSearchOpen(false)} navigate={navigate} />}
       {/* Top utility bar */}
@@ -237,7 +234,6 @@ export default function Launcher() {
           </span>
           <span className="text-[12px] font-black uppercase tracking-[0.1em] gold-text" style={{textShadow:"0 1px 5px rgba(212,175,55,.25)"}}>{user?.role?.toLowerCase() === "owner" ? "OWNER" : user?.role}</span>
         </button>
-        {prefs.master && prefs.camera && <button type="button" title="Document Scanner" aria-label="Document Scanner" onClick={() => setCameraOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Camera size={15}/></button>}
           <button type="button" data-testid="catalog-search-btn" title="Model / Engine Lookup" aria-label="Model / Engine Lookup" onClick={() => setCatalogOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Search size={15}/></button>
         </div>
         <div className="min-w-0 flex-1 text-center">
