@@ -5414,13 +5414,40 @@ class DealRecordIn(BaseModel):
 async def deal_sheets(user: dict = Depends(require("reports.view"))):
     return await sdb.deal_sheets.find({}, {"_id": 0}).sort("created_at", 1).to_list(2000)
 
+async def validate_deal_sheet_name(name, exclude_id=None):
+    name = " ".join(name.split())
+    if not name:
+        raise HTTPException(400, "Name required")
+    query = {"name": {"$regex": "^" + re.escape(name).replace(r"\ ", r"\s+") + "$", "$options": "i"}}
+    if exclude_id:
+        query["id"] = {"$ne": exclude_id}
+    if await sdb.deal_sheets.find_one(query):
+        raise HTTPException(409, "A sheet with this name already exists")
+    return name
+
 @api.post("/deal-register")
 async def deal_sheet_create(body: DealSheetIn, user: dict = Depends(require("reports.view"))):
-    if not body.name.strip():
-        raise HTTPException(400, "Name required")
-    doc = {"id": new_id(), "name": body.name.strip(), "created_at": now_iso()}
+    name = await validate_deal_sheet_name(body.name)
+    doc = {"id": new_id(), "name": name, "created_at": now_iso()}
     await sdb.deal_sheets.insert_one(doc)
+    doc.pop("_id", None)
     return doc
+
+@api.put("/deal-register/{sid}")
+async def deal_sheet_rename(sid: str, body: DealSheetIn, user: dict = Depends(require("reports.view"))):
+    name = await validate_deal_sheet_name(body.name, sid)
+    result = await sdb.deal_sheets.update_one({"id": sid}, {"$set": {"name": name}})
+    if not result.matched_count:
+        raise HTTPException(404, "Sheet not found")
+    return {"ok": True}
+
+@api.delete("/deal-register/{sid}")
+async def deal_sheet_delete(sid: str, user: dict = Depends(require("reports.view"))):
+    if not await sdb.deal_sheets.find_one({"id": sid}):
+        raise HTTPException(404, "Sheet not found")
+    await sdb.deal_records.delete_many({"sheet_id": sid})
+    await sdb.deal_sheets.delete_one({"id": sid})
+    return {"ok": True}
 
 @api.get("/deal-register/{sid}")
 async def deal_records(sid: str, user: dict = Depends(require("reports.view"))):
