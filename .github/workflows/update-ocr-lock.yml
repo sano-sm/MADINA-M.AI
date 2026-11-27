@@ -1,0 +1,30 @@
+name: Update OCR lockfile
+on:
+  push:
+    paths:
+      - '.github/workflows/update-ocr-lock.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 'frontend M.AI'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: corepack enable
+      - run: yarn install --ignore-scripts --non-interactive
+      - run: yarn install --frozen-lockfile --ignore-scripts --non-interactive
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add yarn.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "Synchronize Yarn lockfile with OCR dependency"
+            git push origin HEAD:main
+          fi
