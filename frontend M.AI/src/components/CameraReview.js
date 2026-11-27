@@ -92,7 +92,8 @@ export default function CameraReview({onClose}) {
   if(!vehicle.chassis_number.trim()){setError("Enter chassis number before saving.");return;}
   if(!vehicle.vehicle_name.trim()){setError("Enter vehicle name before saving.");return;}
   if(target==="broker"&&!brokerId){setError("Select a registered broker.");return;}
-  if(target==="broker"&&number(vehicle.paid_amount)>0&&!vehicle.payment_method){setError("Choose Cash or Bank for the broker payment.");return;}\n  if(target==="broker"&&!can("finance.edit")){setError("Broker editing permission required.");return;}
+  if(target==="broker"&&number(vehicle.paid_amount)>0&&!vehicle.payment_method){setError("Choose Cash or Bank for the broker payment.");return;}
+  if(target==="broker"&&!can("finance.edit")){setError("Broker editing permission required.");return;}
   if(target==="direct"&&!can("vehicles.edit")){setError("Vehicle editing permission required.");return;}
   if(target==="direct"&&(!vehicle.supplier.trim()||!vehicle.payment_method)){setError("Enter seller and Cash/Bank payment method.");return;}
   setError("");setSaving(true);
@@ -113,7 +114,8 @@ export default function CameraReview({onClose}) {
  const saveParts = async () => {
   const valid=parts.items.filter(x=>x.name.trim()&&number(x.quantity)>0);
   if(!can("parts.edit")){setError("Parts editing permission required.");return;}
-  if(!valid.length){setError("Add at least one part/engine with quantity.");return;}\n  if(!parts.payment_method){setError("Choose Cash or Bank before saving purchases.");return;}
+  if(!valid.length){setError("Add at least one part/engine with quantity.");return;}
+  if(!parts.payment_method){setError("Choose Cash or Bank before saving purchases.");return;}
   setSaving(true);setError("");
   try{
    for(const x of valid){
