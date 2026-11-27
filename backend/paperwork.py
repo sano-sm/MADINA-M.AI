@@ -63,6 +63,9 @@ def invoice_pdf(doc):
     c = Canvas(out, pagesize=A4)
     c.setTitle(doc["number"])
     margin = 36
+    large = doc.get("kind") == "manual"
+    def fs(normal, bigger):
+        return bigger if large else normal
     design = int(doc.get('purchase_design') or 0) if doc.get('kind') == 'manual' else 0
     palette = ['#163F35','#183B64','#50334F','#63482C','#304B50','#343B46','#713B36','#354D29']
     ink = colors.HexColor(palette[(design-1)%8]) if design else GREEN
@@ -76,7 +79,7 @@ def invoice_pdf(doc):
         return top-height
     def header(first):
         c.setFillColor(ink)
-        c.setFont("Helvetica-Bold", 19)
+        c.setFont("Helvetica-Bold", fs(19,24))
         if layout in (0,3):
             c.drawString(margin,h-40,"INVOICE")
         elif layout in (1,4):
@@ -89,41 +92,41 @@ def invoice_pdf(doc):
             c.line(margin,h-48,w-margin,h-48)
             if layout >= 3:
                 c.line(margin,h-51,w-margin,h-51)
-        c.setFont("Helvetica", 9)
-        c.drawRightString(w-margin, h-56, doc["number"])
-        c.drawRightString(w-margin, h-69, doc["date"])
-        y = h-84
+        c.setFont("Helvetica", fs(9,12))
+        c.drawRightString(w-margin, h-63 if large else h-56, doc["number"])
+        c.drawRightString(w-margin, h-79 if large else h-69, doc["date"])
+        y = h-fs(84,100)
         if first:
             ends = []
             for key, x, top in [("from", margin, y), ("to", w/2+12, y-10)]:
                 party = doc[key]
-                top = paragraph(key.upper(), x, top, 248, 8, True)-3
-                top = paragraph(party.get("name"), x, top, 244, 13, True)-4
+                top = paragraph(key.upper(), x, top, 248, fs(8,11), True)-3
+                top = paragraph(party.get("name"), x, top, 244, fs(13,17), True)-4
                 fields = ["address","phone","email"]
                 if key == "from":
                     fields += ["tax_id","bank_details","bank_name","branch","branch_code","account_number","account_name"]
                 for f in fields:
                     if party.get(f):
                         label = f.replace("_"," ").title()+": " if f not in ("address","email","phone") else ""
-                        top = paragraph(label+str(party[f]),x,top,244,9)-1
+                        top = paragraph(label+str(party[f]),x,top,244,fs(9,13))-1
                 ends.append(top)
             y = min(ends)-14
             c.setFillColor(ink)
-            c.setFont("Helvetica-Bold",13)
+            c.setFont("Helvetica-Bold",fs(13,17))
             c.drawRightString(w-margin,y,"Invoice total   "+yen(total))
-            y -= 12
+            y -= fs(12,17)
         c.setFillColor(ink)
         if layout >= 3:
             c.setStrokeColor(ink)
-            c.rect(margin,y-20,w-2*margin,20,fill=0,stroke=1)
+            c.rect(margin,y-fs(20,27),w-2*margin,fs(20,27),fill=0,stroke=1)
             c.setFillColor(ink)
         else:
-            c.rect(margin,y-20,w-2*margin,20,fill=1,stroke=0)
+            c.rect(margin,y-fs(20,27),w-2*margin,fs(20,27),fill=1,stroke=0)
             c.setFillColor(colors.white)
-        c.setFont("Helvetica-Bold",9)
+        c.setFont("Helvetica-Bold",fs(9,11))
         for x, name in zip([40,109,278,407,461],["Date","Vehicle","Chassis number","Qty","Price excl. tax"]):
-            c.drawString(x,y-14,name)
-        return y-20
+            c.drawString(x,y-fs(14,18),name)
+        return y-fs(20,27)
     rows = doc["rows"]
     nets, subtotal, tax, total = split_prices([r["gross"] for r in rows])
     y = header(True)
@@ -131,12 +134,12 @@ def invoice_pdf(doc):
         if y < 151:
             c.showPage()
             y = header(False)
-        ends = [paragraph(row["date"],40,y-5,65,9),paragraph(row["name"],109,y-5,162,9),
-                paragraph(row["chassis"],278,y-5,122,9),paragraph("1",410,y-5,24,9)]
+        ends = [paragraph(row["date"],40,y-5,65,fs(9,11)),paragraph(row["name"],109,y-5,162,fs(9,13)),
+                paragraph(row["chassis"],278,y-5,122,fs(9,12)),paragraph("1",410,y-5,24,fs(9,12))]
         c.setFillColor(ink)
-        c.setFont("Helvetica",10)
-        c.drawRightString(w-margin-4,y-15,yen(value))
-        y = min(ends)-6
+        c.setFont("Helvetica",fs(10,13))
+        c.drawRightString(w-margin-4,y-fs(15,18),yen(value))
+        y = min(ends)-fs(6,10)
         c.setStrokeColor(colors.HexColor("#DDDFD9"))
         c.line(margin,y,w-margin,y)
     if y < 116:
@@ -144,7 +147,7 @@ def invoice_pdf(doc):
     c.setStrokeColor(GOLD)
     c.line(w/2,107,w-margin,107)
     for y, label, amount in [(88,"Subtotal",subtotal),(70,"Tax (10%)",tax),(45,"Total incl. tax",total)]:
-        c.setFont("Helvetica-Bold" if y==45 else "Helvetica",12 if y==45 else 10)
+        c.setFont("Helvetica-Bold" if y==45 else "Helvetica",fs(12,17) if y==45 else fs(10,13))
         c.setFillColor(ink)
         c.drawString(w/2+6,y,label)
         c.drawRightString(w-margin,y,yen(amount))
