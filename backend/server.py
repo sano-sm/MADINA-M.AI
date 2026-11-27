@@ -1288,9 +1288,21 @@ async def funds_summary() -> dict:
 # ---------------- Vehicles ----------------
 @api.get("/vehicles")
 async def list_vehicles(q: Optional[str] = None, status: Optional[str] = None,
+                        groups: Optional[str] = None,
                         user: dict = Depends(require("vehicles.view"))):
     query = {}
-    if status:
+    if groups is not None:
+        categories = {
+            "stock": {"status": "in_stock"},
+            "dismantled": {"status": "dismantled", "recovery_status": {"$ne": "completed"}},
+            "sold": {"status": {"$in": ["sold", "sold_complete"]}},
+            "completed": {"status": "dismantled", "recovery_status": "completed"},
+        }
+        selected = [categories[k] for k in groups.split(",") if k in categories]
+        if not selected:
+            return []
+        query["$and"] = [{"$or": selected}]
+    elif status:
         query["status"] = status
     if q:
         query["$or"] = [
