@@ -47,7 +47,7 @@ export default function ContainerTT() {
           <span className="ct-folder-heading-line" style={{display:"flex", alignItems:"center", justifyContent:"center", flex:"1 1 auto", minWidth:0, height:"auto", background:"none", overflow:"visible"}}>
             <button type="button" data-testid="ct-folder-account" aria-pressed={folder === "account"}
               onClick={() => setFolder("account")}
-              style={{background:"transparent", border:0, padding:"4px 2px", color:"#e5b94e", fontSize:"clamp(10px, 3.2vw, 18px)", fontWeight:700, whiteSpace:"nowrap", cursor:"pointer", lineHeight:1.2, textDecoration:folder === "account" ? "underline" : "none"}}>
+              style={{background:"transparent", border:"1px solid #d4ad54", borderRadius:"6px", padding:"4px 6px", boxShadow:"inset 0 0 0 1px rgba(229,185,78,0.12)", color:"#e5b94e", fontSize:"clamp(10px, 3.2vw, 18px)", fontWeight:700, whiteSpace:"nowrap", cursor:"pointer", lineHeight:1.2, textDecoration:folder === "account" ? "underline" : "none"}}>
               Container Account
             </button>
           </span>
