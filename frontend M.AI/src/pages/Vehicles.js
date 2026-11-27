@@ -43,7 +43,8 @@ export default function Vehicles() {
   const { can } = useAuth();
   const [rows, setRows] = useState([]);
   const listRequest = useRef(0);
-  const [stockGroup, setStockGroup] = useState("in_stock");
+  const [groups, setGroups] = useState(["stock"]);
+  const [loadingList, setLoadingList] = useState(true);
   const [q, setQ] = useState("");
   const [form, setForm] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -127,8 +128,11 @@ export default function Vehicles() {
 
   const load = useCallback(() => {
     const request = ++listRequest.current;
-    api.get("/vehicles", {params: {q, status: stockGroup || undefined}}).then((r) => { if(request === listRequest.current) setRows(r.data); }).catch(() => {});
-  }, [q, stockGroup]);
+    setLoadingList(true);
+    setRows([]);
+    if (!groups.length) { setLoadingList(false); return; }
+    api.get("/vehicles", {params: {q, groups: groups.join(",")}}).then((r) => { if(request === listRequest.current) setRows(r.data); }).catch(e => { if(request === listRequest.current) toast.error(apiError(e)); }).finally(() => { if(request === listRequest.current) setLoadingList(false); });
+  }, [q, groups]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api.get("/customers").then((r) => setCustomers(r.data)).catch(() => {}); }, []);
 
@@ -264,14 +268,15 @@ export default function Vehicles() {
   const statusTone = { in_stock: "gold", sold: "green", sold_complete: "green", dismantled: "gray" };
   const statusLabel = (s) => (s === "sold" || s === "sold_complete") ? t("sold_complete") : t(s);
 
-  const sortedRows = [...rows].sort((a, b) => {
+  const category = v => v.status === "dismantled" ? (v.recovery_status === "completed" ? "completed" : "dismantled") : (["sold","sold_complete"].includes(v.status) ? "sold" : v.status === "in_stock" ? "stock" : "");
+  const sortedRows = rows.filter(v => groups.includes(category(v))).sort((a, b) => {
     const ad = (a.purchase_date || a.created_at || "9999-12-31").slice(0, 10);
     const bd = (b.purchase_date || b.created_at || "9999-12-31").slice(0, 10);
     return ad.localeCompare(bd) || String(a.created_at || "").localeCompare(String(b.created_at || ""));
   });
 
   const printFiltered = () => {
-    if (!sortedRows.length) return;
+    if (loadingList || !sortedRows.length) return;
     const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
     const title = q.trim() ? `${t("vehicles")} · ${q.trim()}` : t("vehicles");
     const body = sortedRows.map((v) => `
@@ -282,7 +287,7 @@ export default function Vehicles() {
         <td>${esc(v.supplier || "—")}</td>
         <td style="text-align:right">${esc(money(v.purchase_price || 0))}</td>
         <td>${esc(v.purchase_company || "MTC")}</td>
-        <td>${esc(statusLabel(v.status))}</td>
+        <td>${esc((category(v) === "completed" ? "Recovery Completed" : statusLabel(v.status)))}</td>
       </tr>`).join("");
     const w = printWindow();
     if (!w) return;
@@ -300,7 +305,7 @@ export default function Vehicles() {
     { label: t("chassis"), cell: "font-mono text-[var(--gold)]", render: (v) => v.chassis_number },
     { label: t("from_label"), render: (v) => v.supplier || "—" },
     { label: t("purchase_price"), align: "end", render: (v) => money(v.purchase_price) },
-    { label: t("status"), render: (v) => <Badge tone={statusTone[v.status]}>{statusLabel(v.status)}</Badge> },
+    { label: t("status"), render: (v) => <Badge tone={statusTone[v.status]}>{category(v) === "completed" ? "Recovery Completed" : statusLabel(v.status)}</Badge> },
     { label: "", render: (v) => <span title="Purchase company" className="inline-flex min-w-[34px] justify-center rounded border border-[var(--gold)]/35 bg-[var(--gold)]/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[var(--gold)]">{v.purchase_company || "MTC"}</span> },
     { label: t("action"), action: true, render: (v) => (
       <div className="flex items-center gap-1">
@@ -320,19 +325,17 @@ export default function Vehicles() {
 
   return (
     <div>
-      <PageHeader title={t("vehicles")} actions={editable &&
-        <Btn data-testid="add-vehicle-btn" onClick={openAdd}><Plus size={16} />{t("add_vehicle")}</Btn>} />
+      <PageHeader title={t("vehicles")} actions={<div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap"><Btn variant="dark" onClick={printFiltered} disabled={loadingList || !sortedRows.length} title="Print / PDF List"><Printer size={15} />PDF</Btn>{editable && <Btn data-testid="add-vehicle-btn" onClick={openAdd}><Plus size={16} />{t("add_vehicle")}</Btn>}</div>} />
 
       <PurchaseBox kind="vehicles" />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex min-w-[280px] max-w-md flex-1 items-center gap-2 card-surface rounded-sm px-3 py-2">
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex w-full max-w-md items-center gap-2 card-surface rounded-sm px-3 py-2">
           <Search size={16} className="text-muted-foreground" />
           <input data-testid="vehicle-search" value={q} onChange={(e) => setQ(e.target.value)}
             placeholder={t("search_chassis")} className="w-full bg-transparent text-sm text-white outline-none" />
         </div>
-        {[["in_stock","Stock Vehicles"],["dismantled","Dismantled Vehicles"],["","All"]].map(([value,label]) => <Btn key={label} variant={stockGroup === value ? undefined : "dark"} onClick={() => setStockGroup(value)}>{label}</Btn>)}
-        <Btn variant="dark" onClick={printFiltered} disabled={!sortedRows.length}><Printer size={16} />{t("print_pdf_list")}</Btn>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">{[["stock","Stock Vehicles"],["dismantled","Dismantled Vehicles"],["sold","Sold Vehicles"],["completed","Recovery Completed"]].map(([value,label]) => <label key={value} className={`flex min-w-0 cursor-pointer items-center justify-center gap-1 rounded border px-1 py-3 whitespace-nowrap text-[11px] sm:text-sm lg:gap-2 lg:px-3 ${groups.includes(value) ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]" : "border-border card-surface text-white"}`}><input type="checkbox" className="shrink-0 accent-[#d9b84e]" checked={groups.includes(value)} onChange={e => { const checked=e.target.checked; setGroups(old => checked ? [...old,value] : old.filter(x=>x!==value)); }} />{label}</label>)}</div>
       </div>
 
       <DataTable columns={columns} rows={sortedRows} rowKey={(v) => v.id} rowTestId={(v) => `vehicle-row-${v.id}`} empty={t("no_data")} />
