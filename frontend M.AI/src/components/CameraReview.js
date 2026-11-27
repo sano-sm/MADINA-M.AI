@@ -16,8 +16,8 @@ const after = (line, pattern) => {
  return m ? (m[1] || "").trim().replace(/^[：:\s]+/,"") : "";
 };
 function parseVehicle(text) {
- const lines = text.split(/\n/).map(normalize).filter(Boolean);
- const pick = regex => lines.map(line => after(line,regex)).find(Boolean) || "";
+ const lines = text.normalize("NFKC").split(/\n/).map(normalize).filter(Boolean);
+ const pick = regex => [...lines, ...lines.map((line,i)=>line+" "+(lines[i+1]||""))].map(line => after(line,regex)).find(Boolean) || "";
  const result = blankVehicle();
  result.chassis_number = pick(/(?:車台番号|車体番号|chassis\s*(?:no|number)?)[\s:]*([A-Z0-9]{2,12}[-ー－][A-Z0-9]{4,14})/i) ||
    ((text.toUpperCase().match(/\b[A-Z0-9]{2,12}[-ー－][A-Z0-9]{5,14}\b/) || [])[0] || "");
@@ -46,6 +46,7 @@ export default function CameraReview({onClose}) {
  const { can } = useAuth();
  const [kind,setKind] = useState("");
  const [busy,setBusy] = useState(false);
+ const [progress,setProgress]=useState(0);
  const [ready,setReady] = useState(false);
  const [verified,setVerified] = useState(false);
  const [error,setError] = useState("");
@@ -67,16 +68,17 @@ export default function CameraReview({onClose}) {
   if(!file)return;
   if(!file.type.startsWith("image/")){setError("Choose an image.");return;}
   if(file.size>15*1024*1024){setError("Image is too large (15MB maximum).");return;}
-  const id=++runRef.current;setError("");setReady(false);setVerified(false);setBusy(true);
+  const id=++runRef.current;setError("");setReady(false);setVerified(false);setProgress(0);setBusy(true);
   try {
    const {createWorker}=await import("tesseract.js");
-   const worker=await createWorker("jpn+eng",1);
+   const worker=await createWorker("jpn+eng",1,{logger:m=>{if(id===runRef.current&&m.status==="recognizing text")setProgress(Math.round(m.progress*100));}});
    workerRef.current=worker;
-   const {data}=await worker.recognize(file);
+   let bitmap; let canvas; let data;
+   try { bitmap=await createImageBitmap(file); const scale=Math.min(1,2000/Math.max(bitmap.width,bitmap.height)); canvas=document.createElement("canvas"); canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);const ctx=canvas.getContext("2d");ctx.filter="grayscale(1) contrast(1.25)";ctx.drawImage(bitmap,0,0,canvas.width,canvas.height); ({data}=await worker.recognize(canvas)); } finally {bitmap?.close();if(canvas){canvas.width=0;canvas.height=0;}}
    await worker.terminate();workerRef.current=null;
    if(id!==runRef.current)return;
-   const recognized=String(data?.text||"");
-   if(kind==="vehicle"){setVehicle(parseVehicle(recognized));}
+   const recognized=String(data?.text||"").normalize("NFKC");
+   if(kind==="vehicle"){const parsed=parseVehicle(recognized);setVehicle(parsed);if(!fields.some(k=>parsed[k]))setError("No vehicle fields recognized. Retake a sharp, close photo of the document.");}
    else {setParts({...parseParts(recognized),payment_method:"",purchase_company:"MTC"});}
    setReady(true);
    if(!recognized.trim())setError("No readable text found. Fill in details manually or scan again.");
@@ -144,7 +146,7 @@ export default function CameraReview({onClose}) {
     <div className="mt-3 flex items-center justify-between gap-2"><b>{kind==="vehicle"?"Vehicle Document":"Spare Parts List"}</b><button className="text-xs text-yellow-400" onClick={()=>{runRef.current++;setKind("");setReady(false);}}>Change type</button></div>
     <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={scan} className="sr-only" aria-label="Capture document"/>
     <button disabled={busy||saving} className="mt-3 flex w-full items-center justify-center gap-2 rounded bg-yellow-500 px-3 py-3 font-semibold text-black disabled:opacity-50" onClick={()=>inputRef.current?.click()}><Camera size={18}/>{busy?"Scanning…":"Open Camera / Scan Image"}</button>
-    {busy&&<p role="status" className="mt-2 text-sm">Recognizing Japanese / English text on this device…</p>}
+    {busy&&<p role="status" className="mt-2 text-sm">Recognizing Japanese / English text… {progress}%</p>}
     {ready&&kind==="vehicle"&&<div className="mt-4 grid grid-cols-2 gap-3">
       {fields.map(key=><Input key={key} label={{vehicle_name:"Vehicle Name",model:"Model",chassis_number:"Chassis Number",mileage:"Mileage (km)",color:"Color",engine_number:"Engine Number"}[key]} value={vehicle[key]} onChange={v=>updateVehicle(key,v)} />)}
       <Input label="Purchase Date" type="date" value={vehicle.purchase_date} onChange={v=>updateVehicle("purchase_date",v)}/>
