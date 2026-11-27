@@ -1,5 +1,5 @@
-const CACHE = "mtc-v1";
-const ASSETS = ["/", "/index.html", "/logo.png", "/manifest.json"];
+const CACHE = "mtc-v2";
+const ASSETS = ["/", "/index.html", "/logo.png", "/app-icon-192.png", "/app-icon-512.png", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
