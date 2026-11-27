@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 const KEY = "madina_ai_preferences_v1";
-export const DEFAULT_AI_PREFERENCES = { master: true, agent: false, voice: true, camera: false };
+export const DEFAULT_AI_PREFERENCES = { master: true, agent: false, voice: true };
 
 export function readAiPreferences() {
   try {
