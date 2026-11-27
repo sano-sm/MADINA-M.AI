@@ -4899,6 +4899,25 @@ async def paper_choices(kind: str, pid: str, user: dict = Depends(get_current_us
     return rows
 
 
+def purchase_seller_key(party):
+    import unicodedata
+    def norm(value):
+        return "".join(unicodedata.normalize("NFKC", str(value or "")).casefold().split())
+    return hashlib.sha256((norm(party.get("name"))+"|"+norm(party.get("address"))).encode()).hexdigest()
+
+
+@api.get("/paper/purchase-sellers")
+async def purchase_sellers(user: dict = Depends(require("settings.manage"))):
+    saved = await sdb.settings.find_one({"id": settings_id()}, {"purchase_invoice_sellers": 1}) or {}
+    profiles = dict(saved.get("purchase_invoice_sellers") or {})
+    async for doc in sdb.issued_documents.find({"kind":"manual"}, {"from":1,"purchase_design":1}).sort("created_at",-1):
+        party = doc.get("from") or {}
+        if party.get("name"):
+            key = purchase_seller_key(party)
+            profiles.setdefault(key, {**{k:party.get(k) or "" for k in ("name","address","phone","bank_details","tax_id")}, "design":doc.get("purchase_design",0)})
+    return list(profiles.values())
+
+
 @api.post("/paper")
 async def issue_document(body: PaperRequest, user: dict = Depends(get_current_user)):
     paper_permission(body.kind, user)
@@ -4942,9 +4961,22 @@ async def issue_document(body: PaperRequest, user: dict = Depends(get_current_us
            "number": f"{number_prefix}{invoice_year}-{sequence:03d}", "date": datetime.now(timezone(timedelta(hours=9))).date().isoformat(),
            "from": {k: source.get(k) for k in fields}, "to": {k: target.get(k) for k in ("name","phone","address")},
            "party": party["name"], "party_id": body.party_id if body.kind in ("broker", "customer") else None, "rows": rows, "created_at": now_iso()}
+    if body.kind == "manual":
+        seller_key = purchase_seller_key(party)
+        saved = await sdb.settings.find_one({"id": settings_id()}, {"purchase_invoice_sellers":1}) or {}
+        profiles = saved.get("purchase_invoice_sellers") or {}
+        previous = profiles.get(seller_key)
+        if previous is None:
+            async for prior in sdb.issued_documents.find({"kind":"manual"}, {"from":1,"purchase_design":1}).sort("created_at",-1):
+                if purchase_seller_key(prior.get("from") or {}) == seller_key:
+                    previous = {"design":prior.get("purchase_design",0)}
+                    break
+        doc["purchase_design"] = previous["design"] if previous else 1 + int(seller_key[:12],16) % 48
     binary = invoice_pdf(doc)
     doc["pdf"] = base64.b64encode(binary).decode()
     await db.issued_documents.update_one({"_id": key}, {"$setOnInsert": doc}, upsert=True)
+    if body.kind == "manual":
+        await db.settings.update_one({"id":settings_id(),"company_id":cid}, {"$set":{"purchase_invoice_sellers."+seller_key:{**party,"design":doc["purchase_design"]}}})
     return {"id": doc["id"]}
 
 
