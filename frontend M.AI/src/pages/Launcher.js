@@ -237,7 +237,7 @@ export default function Launcher() {
           </span>
           <span className="text-[12px] font-black uppercase tracking-[0.1em] gold-text" style={{textShadow:"0 1px 5px rgba(212,175,55,.25)"}}>{user?.role?.toLowerCase() === "owner" ? "OWNER" : user?.role}</span>
         </button>
-        {prefs.master && prefs.camera && <button type="button" title="Camera privacy review" aria-label="Camera privacy review" onClick={() => setCameraOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Camera size={15}/></button>}
+        {prefs.master && prefs.camera && <button type="button" title="Document Scanner" aria-label="Document Scanner" onClick={() => setCameraOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Camera size={15}/></button>}
           <button type="button" data-testid="catalog-search-btn" title="Model / Engine Lookup" aria-label="Model / Engine Lookup" onClick={() => setCatalogOpen(true)} className="mt-2 rounded-full border border-white/20 p-1.5 text-gray-300"><Search size={15}/></button>
         </div>
         <div className="min-w-0 flex-1 text-center">
