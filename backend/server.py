@@ -3809,7 +3809,29 @@ async def summarize(start, end):
     net_profit = round(total_sales - cogs - total_expenses, 2)
     dismantled_count = await sdb.vehicles.count_documents({"status": "dismantled", "dismantle_date": {"$gte": start, "$lte": hi}})
     movements = await sdb.fund_entries.find({"source_type": {"$nin": ["loan_entry", "transfer"]}, "direction": "in", "date": {"$gte": start, "$lte": hi}}, {"_id": 0}).to_list(50000)
-    return {"complete_cars_sold": len(complete), "dismantled_vehicles": dismantled_count,
+    # Count complete vehicles at the selected period boundaries.
+    def complete_stock_query(cutoff):
+        return {"$and": [
+            {"$or": [{"purchase_date": {"$lte": cutoff, "$nin": [None, ""]}}, {"purchase_date": {"$in": [None, ""]}, "created_at": {"$lte": cutoff}}]},
+            {"$or": [{"status": "in_stock"}, {"status": {"$in": ["sold", "sold_complete"]}, "sale_date": {"$gt": cutoff}}, {"status": "dismantled", "dismantle_date": {"$gt": cutoff}}]}
+        ]}
+    # Opening excludes purchases dated on the first day, but includes exits on that day.
+    opening_vehicles = await sdb.vehicles.count_documents(complete_stock_query(_prev_day(start) + "T23:59:59"))
+    vehicle_stock = await sdb.vehicles.count_documents(complete_stock_query(hi))
+    pending_vehicles = await sdb.broker_vehicles.count_documents({"purchase_date": {"$lte": hi}, "$or": [{"status": "pending"}, {"received_date": {"$gt": hi}}]})
+    # Parts quantities are authoritative for current stock; historical quantities
+    # cannot always be reconstructed after manual edits, so do not invent them.
+    current_period = end[:7] >= now_iso()[:7]
+    engine_stock = await sdb.tracked_parts.count_documents({"part_type": "engine", "status": "available"}) if current_period else None
+    spare_parts_stock = None
+    if current_period:
+        spare_parts_stock = 0
+        async for part in sdb.parts.find({"quantity": {"$gt": 0}}, {"_id": 0, "quantity": 1}):
+            spare_parts_stock += part.get("quantity", 0)
+        spare_parts_stock += await sdb.tracked_parts.count_documents({"part_type": "half_cut", "status": "available"})
+    return {"opening_vehicles": opening_vehicles, "vehicle_stock": vehicle_stock,
+            "pending_vehicles": pending_vehicles, "engine_stock": engine_stock, "spare_parts_stock": spare_parts_stock,
+            "complete_cars_sold": len(complete), "dismantled_vehicles": dismantled_count,
             "cash_received": round(sum(float(e.get("amount") or 0) for e in movements if e.get("method") == "cash" and e.get("category") != "transfer"), 2),
             "bank_received": round(sum(float(e.get("amount") or 0) for e in movements if e.get("method") == "bank" and e.get("category") != "transfer"), 2),
             "included_tax": included_tax, "vehicles_purchased": len(pv), "purchase_total": vehicle_purchases,
