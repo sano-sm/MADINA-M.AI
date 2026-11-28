@@ -58,7 +58,11 @@ api.interceptors.response.use(
     const cfg = err.config || {};
     // Backend sleep / cold start / temporary network drop: auto-reconnect with
     // backoff. Never destroy a valid session for these — retry until the pod wakes.
-    if (isTransientGatewayError(err) && !cfg.__noRetry) {
+    // Never automatically replay a write: a timed-out POST/PUT/DELETE may already
+    // have succeeded on the server. A repeat could create duplicate transactions.
+    const method = String(cfg.method || "get").toLowerCase();
+    const readOnly = method === "get" || method === "head" || method === "options";
+    if (readOnly && isTransientGatewayError(err) && !cfg.__noRetry) {
       cfg.__retryCount = cfg.__retryCount || 0;
       if (cfg.__retryCount < 10) {
         cfg.__retryCount++;
