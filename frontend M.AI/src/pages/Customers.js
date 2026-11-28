@@ -22,6 +22,11 @@ export default function Customers() {
   }, []);
   const [selectedId, setSelectedId] = useState("");
   const [deleteForm, setDeleteForm] = useState(null);
+  const pressTimer=useRef(null), pressStart=useRef(null), longPressed=useRef(false);
+  const stopPress=()=>clearTimeout(pressTimer.current);
+  useEffect(()=>()=>clearTimeout(pressTimer.current),[]);
+  const pressProps=(id)=>({onPointerDown:e=>{longPressed.current=false;pressStart.current=[e.clientX,e.clientY];stopPress();if(editable)pressTimer.current=setTimeout(()=>{longPressed.current=true;setSelectedId(id)},550)},onPointerMove:e=>{if(pressStart.current&&Math.hypot(e.clientX-pressStart.current[0],e.clientY-pressStart.current[1])>10)stopPress()},onPointerUp:stopPress,onPointerCancel:stopPress,onPointerLeave:stopPress,onContextMenu:e=>e.preventDefault(),style:{WebkitTouchCallout:"none",userSelect:"none"}});
+
   const [paymentForm, setPaymentForm] = useState(null);
   const [savingPayment, setSavingPayment] = useState(false);
   const paymentBusyRef = useRef(false);
@@ -140,7 +145,7 @@ export default function Customers() {
   const confirmDelete = async () => {
     if (!deleteForm?.password) { toast.error(t("password_required")); return; }
     try {
-      await api.post(`/customers/${deleteForm.customer.id}/delete-secure`, { password: deleteForm.password });
+      await api.post(`/customers/${deleteForm.customer.id}/delete-secure`, { pin: deleteForm.password });
       toast.success(t("customer_deleted"));
       setDeleteForm(null); setSelectedId(""); load();
     } catch (e) { toast.error(apiError(e)); }
@@ -220,7 +225,7 @@ export default function Customers() {
         </div>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {rows.map((c) => <button key={c.id} data-testid={`customer-card-${c.id}`} onClick={async () => { const {data}=await api.get(`/customers/${c.id}`); setSalesSearch(""); setDetail(data); }} className="card-surface min-h-[70px] rounded-sm p-3 text-start hover:border-[var(--gold)]/50"><div className="font-semibold text-white">{c.name}</div></button>)}
+        {rows.map((c) => <button key={c.id} data-testid={`customer-card-${c.id}`} {...pressProps(c.id)} onClick={async () => { if(longPressed.current){longPressed.current=false;return;} const {data}=await api.get(`/customers/${c.id}`); setSalesSearch(""); setDetail(data); }} className="card-surface min-h-[70px] rounded-sm p-3 text-start hover:border-[var(--gold)]/50"><div className="font-semibold text-white">{c.name}{selectedId===c.id&&<span className="ml-2 text-green-400">✓</span>}</div></button>)}
         {!rows.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
       </div>
       <Modal open={!!form} onClose={() => setForm(null)} title={form?.id ? t("edit") : t("add_customer")} testid="customer-modal">
@@ -254,8 +259,8 @@ export default function Customers() {
         )}
         {deleteForm && deleteForm.stage === 2 && (
           <div>
-            <p className="mb-3 text-sm text-muted-foreground">{t("enter_password_delete")}</p>
-            <Field label={t("password")}><Input autoFocus type="password" data-testid="delete-customer-password" value={deleteForm.password}
+            <p className="mb-3 text-sm text-muted-foreground">Enter your Screen PIN to confirm.</p>
+            <Field label="Screen PIN"><Input autoFocus inputMode="numeric" maxLength={8} type="password" data-testid="delete-customer-password" value={deleteForm.password}
               onChange={(e) => setDeleteForm({ ...deleteForm, password: e.target.value })} /></Field>
             <div className="flex justify-end gap-2">
               <Btn variant="dark" onClick={() => setDeleteForm({ ...deleteForm, stage: 1, password: "" })}>{t("back")}</Btn>
