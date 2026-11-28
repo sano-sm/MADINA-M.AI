@@ -136,14 +136,21 @@ export default function Vehicles() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api.get("/customers").then((r) => setCustomers(r.data)).catch(() => {}); }, []);
 
-  const save = async (formOverride = form) => {
+  const savingVehicle = useRef(false);
+  const save = async (formOverride) => {
+    if (savingVehicle.current) return;
+    // React passes a click event to onClick; only explicit form objects may override state.
+    const record = formOverride && typeof formOverride === "object" && !("nativeEvent" in formOverride) && !("preventDefault" in formOverride) && "chassis_number" in formOverride ? formOverride : form;
+    if (!record) return;
+    savingVehicle.current = true;
     try {
-      const payload = { ...formOverride, year: formOverride.year ? +formOverride.year : null,
-        mileage: formOverride.mileage ? +formOverride.mileage : null, purchase_price: +formOverride.purchase_price || 0 };
-      if (formOverride.id) await api.put(`/vehicles/${formOverride.id}`, payload);
+      const payload = { ...record, year: record.year ? +record.year : null,
+        mileage: record.mileage ? +record.mileage : null, purchase_price: +record.purchase_price || 0 };
+      if (record.id) await api.put(`/vehicles/${record.id}`, payload);
       else await api.post("/vehicles", payload);
       toast.success(t("save")); setForm(null); load();
     } catch (e) { toast.error(apiError(e)); }
+    finally { savingVehicle.current = false; }
   };
   const saveRef = useRef(null);
   saveRef.current = save;
@@ -390,7 +397,7 @@ export default function Vehicles() {
             {catalogChoices.length>0 && <div className="mt-2 rounded-lg border border-white/20 p-3"><p className="mb-2 text-xs">Choose correct vehicle and engine (reference only):</p>{catalogChoices.map((r,i)=><button key={i} type="button" onClick={()=>applyCatalogChoice(r)} className="mb-1 block w-full rounded border border-white/10 p-2 text-left text-sm hover:bg-white/10">{r.make} {r.vehicle_name} · {r.model_code} · {r.engine_code}</button>)}</div>}
             <div className="mt-3 flex justify-end gap-2">
               <Btn variant="dark" onClick={() => setForm(null)}>{t("cancel")}</Btn>
-              <Btn data-testid="save-vehicle" onClick={save}>{t("save")}</Btn>
+              <Btn data-testid="save-vehicle" onClick={() => save()}>{t("save")}</Btn>
             </div>
           </div>
         )}
