@@ -3807,7 +3807,12 @@ async def summarize(start, end):
     closing_stock = await stock_value_asof(end)
     cogs = round(opening_stock + total_purchases - closing_stock, 2)
     net_profit = round(total_sales - cogs - total_expenses, 2)
-    return {"included_tax": included_tax, "vehicles_purchased": len(pv), "purchase_total": vehicle_purchases,
+    dismantled_count = await sdb.vehicles.count_documents({"status": "dismantled", "dismantle_date": {"$gte": start, "$lte": hi}})
+    movements = await sdb.fund_entries.find({"source_type": {"$nin": ["loan_entry", "transfer"]}, "direction": "in", "date": {"$gte": start, "$lte": hi}}, {"_id": 0}).to_list(50000)
+    return {"complete_cars_sold": len(complete), "dismantled_vehicles": dismantled_count,
+            "cash_received": round(sum(float(e.get("amount") or 0) for e in movements if e.get("method") == "cash" and e.get("category") != "transfer"), 2),
+            "bank_received": round(sum(float(e.get("amount") or 0) for e in movements if e.get("method") == "bank" and e.get("category") != "transfer"), 2),
+            "included_tax": included_tax, "vehicles_purchased": len(pv), "purchase_total": vehicle_purchases,
             "vehicle_purchases": vehicle_purchases, "standalone_purchases": standalone_purchases,
             "parts_purchases": parts_purchases, "total_purchases": total_purchases,
             "complete_sales": round(complete_sales, 2), "engine_sales": round(engine_sales, 2),
