@@ -5445,7 +5445,8 @@ async def deal_sheet_rename(sid: str, body: DealSheetIn, user: dict = Depends(re
     return {"ok": True}
 
 @api.delete("/deal-register/{sid}")
-async def deal_sheet_delete(sid: str, user: dict = Depends(require("reports.view"))):
+async def deal_sheet_delete(sid: str, body: PinIn, user: dict = Depends(require("reports.view"))):
+    await pin_verify(body)
     if not await sdb.deal_sheets.find_one({"id": sid}):
         raise HTTPException(404, "Sheet not found")
     await sdb.deal_records.delete_many({"sheet_id": sid})
