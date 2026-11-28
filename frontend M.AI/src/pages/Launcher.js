@@ -150,7 +150,7 @@ export default function Launcher() {
       .then(setSeries);
   }, [can]);
 
-  const apps = APPS.filter((a) => can(a.perm));
+  const apps = APPS.filter((a) => can(a.perm) || (a.key === "container_tt" && user?.role === "owner"));
   const alertCount = stats?.alerts_count || 0;
 
   const openApp = (a) => {
@@ -369,7 +369,7 @@ export default function Launcher() {
       )}
 
       {/* Bottom tab bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[var(--surface)]/95 backdrop-blur-xl">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[var(--surface)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-end justify-between px-8 py-2">
           {bottom.slice(0, 2).map((b) => <TabBtn key={b.key} b={b} t={t} />)}
           <div className="relative">
@@ -437,9 +437,9 @@ function Reminder({ icon: Icon, tone, count, title, onClick, testid }) {
 function TabBtn({ b, t }) {
   return (
     <button data-testid={`tab-${b.key}`} onClick={b.onClick}
-      className={`flex flex-col items-center gap-1 ${b.active ? "gold-text" : "text-muted-foreground hover:text-white"}`}>
+      className={`flex flex-col items-center gap-1 ${b.active ? "gold-text" : b.key === "container_tt" ? "gold-text" : "text-muted-foreground hover:text-white"}`}>
       <b.icon size={20} />
-      <span className="text-[10px]">{t(b.key)}</span>
+      <span className="text-[10px]">{b.key === "container_tt" ? "Container & TT" : t(b.key)}</span>
     </button>
   );
 }
