@@ -185,7 +185,7 @@ def auto_parts_invoice_pdf(doc):
         c.setFont("Helvetica-Bold", 11)
         c.drawCentredString(w/2, h-92, title)
         c.setFont("Helvetica-Bold", 10)
-        c.drawRightString(right, h-108, "GRAND TOTAL: JPY {:,}".format(total))
+        c.drawRightString(right, h-108, "GRAND TOTAL: " + yen(total))
         c.setStrokeColor(GOLD)
         c.line(margin, h-115, right, h-115)
         return h-129
@@ -218,7 +218,7 @@ def auto_parts_invoice_pdf(doc):
                 desc = str(row.get("number") or "")[:31]
                 c.drawString(col[base+1]+3,y,desc)
                 if row.get("price") not in ("",None):
-                    c.drawRightString(col[base+3]-4,y,"{:,}".format(int(row["price"])))
+                    c.drawRightString(col[base+3]-4,y,yen(int(row["price"])))
         return bottom
     for page in range(engine_pages):
         y = header("ENGINE LIST")
