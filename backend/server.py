@@ -1241,8 +1241,30 @@ async def fund_remove(source_type: str, source_id: str):
     await sdb.fund_entries.delete_many({"source_type": source_type, "source_id": source_id})
 
 
-async def funds_summary() -> dict:
-    entries = await sdb.fund_entries.find({"source_type": {"$ne": "loan_entry"}}, {"_id": 0}).to_list(50000)
+async def allocation_bank_receipts():
+    # Allocation records are the authoritative receipts; derive one movement per
+    # allocation, including legacy records, without writing duplicate ledger rows.
+    entries = []
+    for collection, kind, date_field, label in (
+        (sdb.scrap_allocations, "scrap_allocation", "date", "Scrap"),
+        (sdb.shokubai_allocations, "shokubai_allocation", "sale_date", "Shokubai"),
+    ):
+        async for a in collection.find({}, {"_id": 0}):
+            amount = round(float(a.get("total_amount") or 0), 2)
+            date = a.get(date_field) or (a.get("month") + "-15" if a.get("month") else a.get("new_cutoff"))
+            if amount <= 0 or not date or not a.get("id"):
+                continue
+            entries.append({"id": kind + ":" + a["id"], "source_type": kind,
+                "source_id": a["id"], "direction": "in", "method": "bank",
+                "amount": amount, "date": date, "category": kind,
+                "description": label + " receipt " + date[:10]})
+    return entries
+
+
+async def funds_summary(entries=None) -> dict:
+    if entries is None:
+        entries = await sdb.fund_entries.find({"source_type": {"$nin": ["loan_entry", "scrap_allocation", "shokubai_allocation"]}}, {"_id": 0}).to_list(50000)
+        entries.extend(await allocation_bank_receipts())
     cash = 0.0
     bank = 0.0
     for e in entries:
@@ -3808,7 +3830,8 @@ async def summarize(start, end):
     cogs = round(opening_stock + total_purchases - closing_stock, 2)
     net_profit = round(total_sales - cogs - total_expenses, 2)
     dismantled_count = await sdb.vehicles.count_documents({"status": "dismantled", "dismantle_date": {"$gte": start, "$lte": hi}})
-    movements = await sdb.fund_entries.find({"source_type": {"$nin": ["loan_entry", "transfer"]}, "direction": "in", "date": {"$gte": start, "$lte": hi}}, {"_id": 0}).to_list(50000)
+    movements = await sdb.fund_entries.find({"source_type": {"$nin": ["loan_entry", "transfer", "scrap_allocation", "shokubai_allocation"]}, "direction": "in", "date": {"$gte": start, "$lte": hi}}, {"_id": 0}).to_list(50000)
+    movements.extend(e for e in await allocation_bank_receipts() if start <= e["date"] <= hi)
     # Count complete vehicles at the selected period boundaries.
     def complete_stock_query(cutoff):
         return {"$and": [
@@ -4455,9 +4478,11 @@ async def delete_loan_entry(eid: str, user: dict = Depends(require("reports.view
 # ---------------- Cash & Bank / Funds ----------------
 @api.get("/funds")
 async def get_funds(user: dict = Depends(require("settings.manage"))):
-    summary = await funds_summary()
-    entries = await sdb.fund_entries.find({"source_type": {"$ne": "loan_entry"}}, {"_id": 0}).sort("date", -1).to_list(5000)
-    return {"summary": summary, "entries": entries}
+    entries = await sdb.fund_entries.find({"source_type": {"$nin": ["loan_entry", "scrap_allocation", "shokubai_allocation"]}}, {"_id": 0}).to_list(50000)
+    entries.extend(await allocation_bank_receipts())
+    summary = await funds_summary(entries)
+    entries.sort(key=lambda e: e.get("date") or "", reverse=True)
+    return {"summary": summary, "entries": entries[:5000]}
 
 
 @api.post("/funds/manual")
