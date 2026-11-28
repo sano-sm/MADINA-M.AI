@@ -36,7 +36,6 @@ const APPS = [
   { key: "invoices", route: "/invoices", icon: Receipt, perm: "settings.manage", color: GOLD },
   { key: "alerts", route: "/alerts", icon: Bell, perm: "dashboard.view", color: GOLD, badge: true },
   { key: "settings", route: "/settings?tab=company_profile", icon: SettingsIcon, perm: "settings.view", color: GOLD },
-  { key: "container_tt", route: "/container", icon: Container, perm: "finance.view", color: GOLD },
 ];
 
 const APP_LABELS = {
