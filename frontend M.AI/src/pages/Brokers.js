@@ -21,6 +21,12 @@ export default function Brokers() {
   const [fields, setFields] = useState({});
   const [phone, setPhone] = useState("");
   const [detail, setDetail] = useState(null);
+  const [selectedId,setSelectedId]=useState(""); const [pin,setPin]=useState(null); const [deleting,setDeleting]=useState(false);
+  const pressTimer=useRef(null), pressStart=useRef(null), longPressed=useRef(false);
+  const stopPress=()=>clearTimeout(pressTimer.current);
+  useEffect(()=>()=>clearTimeout(pressTimer.current),[]);
+  const pressProps=(id)=>({onPointerDown:e=>{longPressed.current=false;pressStart.current=[e.clientX,e.clientY];stopPress();if(editable)pressTimer.current=setTimeout(()=>{longPressed.current=true;setSelectedId(id)},550)},onPointerMove:e=>{if(pressStart.current&&Math.hypot(e.clientX-pressStart.current[0],e.clientY-pressStart.current[1])>10)stopPress()},onPointerUp:stopPress,onPointerCancel:stopPress,onPointerLeave:stopPress,onContextMenu:e=>e.preventDefault(),style:{WebkitTouchCallout:"none",userSelect:"none"}});
+
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("record");
     if (id) api.get("/brokers/" + encodeURIComponent(id)).then(r => setDetail(r.data)).catch(e => toast.error(apiError(e)));
@@ -68,9 +74,11 @@ export default function Brokers() {
       <PageHeader title={t("brokers")} actions={editable &&
         <Btn data-testid="add-broker-btn" onClick={() => setAddOpen(true)}><Plus size={16} />{t("add_broker")}</Btn>} />
 
+      {editable&&<div className="mb-2 flex justify-end gap-2"><button className="text-xs" onClick={()=>setSelectedId("")}>Clear</button><button aria-label="Delete selected broker" disabled={!selectedId} className="rounded border border-red-400 p-1 text-red-400 disabled:opacity-40" onClick={()=>setPin("")}><Trash2 size={16}/></button></div>}
+      <Modal open={pin!==null} onClose={()=>{if(!deleting)setPin(null)}} title="Delete Broker"><p className="text-sm text-red-400">Delete {rows.find(b=>b.id===selectedId)?.name}? Accounts with business history cannot be deleted.</p><Field label="Screen PIN"><Input type="password" inputMode="numeric" maxLength={8} value={pin||""} onChange={e=>setPin(e.target.value)}/></Field><Btn variant="danger" disabled={deleting||!/^\d{4,8}$/.test(pin||"")} onClick={async()=>{setDeleting(true);try{await api.delete(`/brokers/${selectedId}`,{data:{pin}});setPin(null);setSelectedId("");load();toast.success("Broker deleted")}catch(e){setPin("");toast.error(apiError(e))}finally{setDeleting(false)}}}>Confirm Delete</Btn></Modal>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {rows.map((b) => (
-          <button key={b.id} data-testid={`broker-card-${b.id}`} onClick={() => openDetail(b.id)}
+          <button key={b.id} data-testid={`broker-card-${b.id}`} {...pressProps(b.id)} onClick={() => {if(longPressed.current){longPressed.current=false;return;}openDetail(b.id)}}
             className="card-surface flex min-w-0 items-center justify-between gap-1 rounded-sm p-3 text-start hover:border-[var(--gold)]/50">
             <div className="min-w-0 flex-1">
               <div className="break-words font-semibold text-white" style={{overflowWrap:"anywhere"}}>{b.name}</div>
@@ -80,7 +88,7 @@ export default function Brokers() {
                 {b.account.pending_count > 0 && <Badge tone="gold">{b.account.pending_count} {t("pending")}</Badge>}
               </div>
             </div>
-            <ChevronRight size={18} className="shrink-0 text-muted-foreground" />
+            {selectedId===b.id?<span className="text-green-400">✓</span>:<ChevronRight size={18} className="shrink-0 text-muted-foreground" />}
           </button>
         ))}
         {!rows.length && <div className="text-sm text-muted-foreground">{t("no_data")}</div>}
