@@ -137,6 +137,12 @@ logger = logging.getLogger("mtc")
 GOLD = colors.HexColor("#D4AF37")
 DARK = colors.HexColor("#111111")
 
+
+@api.get("/health")
+async def health():
+    """Unauthenticated, database-free probe used to wake/check the Render API."""
+    return {"ok": True}
+
 # ---------------- Permissions ----------------
 ALL_PERMISSIONS = [
     "dashboard.view",

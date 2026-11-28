@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
       let tries = 0;
       const attempt = () => {
         tries += 1;
-        api.get("/auth/pin/status", { __noRetry: true })
+        api.get("/health", { __noRetry: true })
           .then(() => clearInterval(timer))
           .catch(() => { if (tries >= 8) clearInterval(timer); });
       };
