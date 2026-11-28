@@ -5404,6 +5404,9 @@ class DealRecordIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     chassis: str = Field(default="", max_length=100)
     direction: str
+    shipping_payer: str = "none"
+    shipping_cost: int = Field(default=0, ge=0, le=1000000000000)
+    shipping_responsibility: str = "ours"
     cost: Optional[int] = Field(default=None, ge=0, le=1000000000000)
     price: Optional[int] = Field(default=None, ge=0, le=1000000000000)
     paid: int = Field(default=0, ge=0, le=1000000000000)
@@ -5459,7 +5462,13 @@ async def deal_record_save(sid: str, rid: str, body: DealRecordIn, user: dict = 
         raise HTTPException(404, "Sheet not found")
     if body.direction not in ("given", "taken", "auction") or not body.name.strip():
         raise HTTPException(400, "Invalid record")
+    if body.shipping_payer not in ("none", "ours", "other") or body.shipping_responsibility not in ("ours", "other"):
+        raise HTTPException(400, "Invalid shipping selection")
     doc = body.model_dump()
+    if body.shipping_payer == "none":
+        doc["shipping_cost"] = 0
+    if body.direction == "auction":
+        doc["shipping_responsibility"] = "ours"
     if body.direction == "taken":
         doc["cost"] = None
     await sdb.deal_records.update_one({"id": rid, "sheet_id": sid}, {"$set": doc, "$setOnInsert": {"created_at": now_iso()}}, upsert=True)
