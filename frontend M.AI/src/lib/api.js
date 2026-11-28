@@ -6,6 +6,7 @@ const API = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "").replac
 export const api = axios.create({ baseURL: API });
 
 api.interceptors.request.use((config) => {
+  if (["get", "head", "options"].includes(String(config.method || "get").toLowerCase()) && !config.timeout && !config.responseType) config.timeout = 20000;
   const token = localStorage.getItem("mtc_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   const company = localStorage.getItem("mtc_company");
@@ -15,9 +16,14 @@ api.interceptors.request.use((config) => {
 
 let reconnectToast = null;
 let disconnected = false;
+let pendingRetries = 0;
+let lastFailure = 0;
+let recoveryTimer = null;
 
 const showReconnecting = () => {
   disconnected = true;
+  lastFailure = Date.now();
+  if (recoveryTimer) { clearTimeout(recoveryTimer); recoveryTimer = null; }
   if (!reconnectToast) reconnectToast = toast.loading("Reconnecting…");
 };
 // Dismiss the spinner without declaring success (used when retries are exhausted,
@@ -28,12 +34,15 @@ const hideReconnecting = () => {
 // A request just succeeded: clear the spinner and, if we were disconnected,
 // announce recovery so the app can reload its data.
 const markConnected = () => {
-  if (reconnectToast) { toast.dismiss(reconnectToast); reconnectToast = null; }
-  if (disconnected) {
+  if (!disconnected || pendingRetries || recoveryTimer) return;
+  recoveryTimer = setTimeout(() => {
+    recoveryTimer = null;
+    if (pendingRetries || Date.now() - lastFailure < 2000) return;
+    hideReconnecting();
     disconnected = false;
     toast.success("Reconnected");
     window.dispatchEvent(new Event("mtc:reconnected"));
-  }
+  }, 2200);
 };
 export const isDisconnected = () => disconnected;
 
@@ -41,6 +50,7 @@ export const isDisconnected = () => disconnected;
 // gateway/ingress error (backend sleeping or cold-starting) returns an HTML/empty
 // body — including a spurious 404 — which we must retry, NOT surface or log out on.
 const isTransientGatewayError = (err) => {
+  if (axios.isCancel(err)) return false;
   if (!err.response) return true; // network drop / no response
   const status = err.response.status;
   if (status === 502 || status === 503 || status === 504) return true;
@@ -68,12 +78,24 @@ api.interceptors.response.use(
         cfg.__retryCount++;
         showReconnecting();
         const delay = Math.min(700 * cfg.__retryCount, 5000);
-        await new Promise((res) => setTimeout(res, delay));
-        return api(cfg);
+        pendingRetries++;
+        try {
+          await new Promise((res) => setTimeout(res, delay));
+          // Bound only retried reads; do not interrupt financial writes or uploads.
+          cfg.timeout = cfg.timeout || 20000;
+          const result = await api(cfg);
+          pendingRetries--;
+          markConnected();
+          return result;
+        } catch (error) {
+          pendingRetries--;
+          if (!pendingRetries) hideReconnecting();
+          throw error;
+        }
       }
       // Gave up after retries: never leave the "Reconnecting…" spinner stuck.
       // Stay flagged disconnected so the next successful call announces recovery.
-      hideReconnecting();
+      if (pendingRetries <= 1) hideReconnecting();
     }
     // Only redirect on a genuine expired/revoked session — i.e. a token WAS present.
     // Auth endpoints (login / pin verify / pin reset) handle their own 401 locally,
