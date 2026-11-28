@@ -1937,7 +1937,7 @@ async def update_customer(cid: str, body: Customer, user: dict = Depends(require
 
 
 @api.post("/customers/{cid}/delete-secure")
-async def delete_customer_secure(cid: str, body: SecureCustomerDeleteIn,
+async def delete_customer_secure(cid: str, body: PinIn,
                                  user: dict = Depends(require("customers.edit"))):
     """Permanently delete only an empty customer after password re-verification.
 
@@ -1948,9 +1948,7 @@ async def delete_customer_secure(cid: str, body: SecureCustomerDeleteIn,
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    raw_user = await db["users"].find_one({"id": user["id"]})
-    if not raw_user or not verify_password(body.password, raw_user.get("password_hash", "")):
-        raise HTTPException(status_code=401, detail="Incorrect website password")
+    await pin_verify(body)
 
     links = {
         "invoices": await sdb.invoices.count_documents({"customer_id": cid}),
@@ -4220,7 +4218,10 @@ async def update_broker(bid: str, body: BrokerIn, user: dict = Depends(require("
 
 
 @api.delete("/brokers/{bid}")
-async def delete_broker(bid: str, user: dict = Depends(require("finance.edit"))):
+async def delete_broker(bid: str, body: PinIn, user: dict = Depends(require("finance.edit"))):
+    await pin_verify(body)
+    if await sdb.broker_vehicles.count_documents({"broker_id": bid}) or await sdb.broker_payments.count_documents({"broker_id": bid}):
+        raise HTTPException(409, "Broker has business history and cannot be permanently deleted")
     bvs = await sdb.broker_vehicles.find({"broker_id": bid}, {"_id": 0, "id": 1}).to_list(5000)
     bps = await sdb.broker_payments.find({"broker_id": bid}, {"_id": 0, "id": 1}).to_list(5000)
     await sdb.broker_vehicles.delete_many({"broker_id": bid})
